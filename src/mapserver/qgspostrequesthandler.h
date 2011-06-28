@@ -1,10 +1,9 @@
 /***************************************************************************
-                              qgsgetrequesthandler.h
-                 class for reading from/ writing to HTTP GET
-                              -------------------
-  begin                : May 16, 2006
-  copyright            : (C) 2006 by Marco Hugentobler & Ionut Iosifescu
-  email                : marco dot hugentobler at karto dot baug dot ethz dot ch
+                              qgspostrequesthandler.h
+                            ------------------------------
+  begin                :  2011
+  copyright            : (C) 2011 by Marco Hugentobler
+  email                : marco dot hugentobler at sourcepole dot ch
  ***************************************************************************/
 
 /***************************************************************************
@@ -16,11 +15,20 @@
  *                                                                         *
  ***************************************************************************/
 
+#ifndef QGSPOSTREQUESTHANDLER_H
+#define QGSPOSTREQUESTHANDLER_H
+
 #include "qgshttprequesthandler.h"
 
-class QgsGetRequestHandler: public QgsHttpRequestHandler
+/**Request handler for HTTP POST*/
+class QgsPostRequestHandler: public QgsHttpRequestHandler
 {
   public:
-    QgsGetRequestHandler();
+    QgsPostRequestHandler();
+    ~QgsPostRequestHandler();
+
+    /**Parses the input and creates a request neutral Parameter/Value map*/
     std::map<QString, QString> parseInput();
 };
+
+#endif // QGSPOSTREQUESTHANDLER_H

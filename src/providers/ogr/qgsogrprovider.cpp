@@ -454,14 +454,14 @@ void QgsOgrProvider::setRelevantFields( bool fetchGeometry, const QgsAttributeLi
 #endif
 }
 
-bool QgsOgrProvider::featureAtId( int featureId,
+bool QgsOgrProvider::featureAtId( QgsFeatureId featureId,
                                   QgsFeature& feature,
                                   bool fetchGeometry,
                                   QgsAttributeList fetchAttributes )
 {
   setRelevantFields( fetchGeometry, fetchAttributes );
 
-  OGRFeatureH fet = OGR_L_GetFeature( ogrLayer, featureId );
+  OGRFeatureH fet = OGR_L_GetFeature( ogrLayer, FID_TO_NUMBER( featureId ) );
   if ( !fet )
     return false;
 
@@ -518,7 +518,7 @@ bool QgsOgrProvider::nextFeature( QgsFeature& feature )
   OGRFeatureH fet;
   QgsRectangle selectionRect;
 
-  setRelevantFields( mFetchGeom, mAttributesToFetch );
+  setRelevantFields( mFetchGeom || mUseIntersect, mAttributesToFetch );
 
   while (( fet = OGR_L_GetNextFeature( ogrLayer ) ) )
   {

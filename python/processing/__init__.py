@@ -82,6 +82,7 @@ class Framework:
         """
         criterion = lambda (_, v): v > 0.02 and v < 0.25
         tags = self.tagFrequency().items()
+        if not tags: return tags
         tags, _ = zip(*filter(criterion, tags))
         return tags
         

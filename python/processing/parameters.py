@@ -52,6 +52,12 @@ class Parameter:
             return self.type()()
         except:
             return ""
+    def value(self):
+        if self._value:
+            return self._value
+        return defaultValue()
+    def setValue(self, value):
+        self._value = value
     def validator(self):
         return None
 
@@ -60,7 +66,14 @@ class ParameterList(Parameter):
 				 defaultValue = [], role = None):
         Parameter.__init__(self, name, list, description,
 				 defaultValue, role)
-                 
+
+class StateParameter(Parameter):
+    class State:
+        stopped, running = 1, 2
+    def __init__(self, defaultValue = State.stopped):
+        Parameter.__init__(self, "State", int, "",
+				 defaultValue, Parameter.Role.option)
+
 class NumericParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = 0.0, role = None):

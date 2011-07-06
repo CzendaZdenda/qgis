@@ -128,15 +128,12 @@ class Module(processing.Module):
         if self._parameters is not None:
             return self._parameters
         self._parameters = set()
-        print self.module.Get_Name()
         paramsList = [self.module.Get_Parameters()]
         paramsList += [self.module.Get_Parameters(i) for i in
             range(self.module.Get_Parameters_Count())]
         for params in paramsList:
-            print "%s" % params.Get_Name()
             for j in range(params.Get_Count()):
                 self.addParameter(params.Get_Parameter(j))
-                print "- %i: %s" % (j, params.Get_Parameter(j).Get_Name())
         return self._parameters
     def tags(self):
         return processing.Module.tags(self) | set([processing.Tag('saga')])

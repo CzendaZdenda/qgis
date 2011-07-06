@@ -25,7 +25,7 @@ from qgis.core import *
 
 import os
 import processing
-import processing.parameters
+from processing.parameters import *
 import saga_api as saga
 
 def getLibraryPaths():
@@ -33,12 +33,14 @@ def getLibraryPaths():
         paths = os.environ['MLB_PATH'].split(':')
     except KeyError:
         paths = ['/usr/lib/saga/', '/usr/local/lib/saga/']
-        print "MLB_PATH not set."
+        noMLBpath = True
     for p in paths:
         #print "Seaching SAGA modules in " + p + "."
         if os.path.exists(p):
             return [p + '/' + fn for fn in os.listdir(p)]
-    raise RuntimeError("No SAGA modules found.")
+    if noMLBpath:
+        print "Warning: MLB_PATH not set."
+    raise RuntimeError("No SAGA modules found in %s." % paths)
 
 class SAGAPlugin:
     def __init__(self, _):
@@ -98,9 +100,8 @@ class Module(processing.Module):
             self.module.Get_Name(),
             self.module.Get_Description())
     def addParameter(self, sagaParam):
-        from processing.parameters import *
         sagaToQGisParam = {
-            #saga.PARAMETER_TYPE_Node:   ParameterList,
+            #saga.PARAMETER_TYPE_Node:  ParameterList,
             saga.PARAMETER_TYPE_Int:    NumericParameter,
             saga.PARAMETER_TYPE_Double: NumericParameter,
             saga.PARAMETER_TYPE_Degree: NumericParameter,
@@ -108,7 +109,9 @@ class Module(processing.Module):
             saga.PARAMETER_TYPE_String: StringParameter,
             saga.PARAMETER_TYPE_Text:   StringParameter,
             saga.PARAMETER_TYPE_FilePath: PathParameter,
-            saga.PARAMETER_TYPE_Choice: ChoiceParameter
+            saga.PARAMETER_TYPE_Choice: ChoiceParameter,
+            saga.PARAMETER_TYPE_Shapes: VectorLayerParameter,
+            saga.PARAMETER_TYPE_Grid:   RasterLayerParameter
         }
         name = sagaParam.Get_Name()
         descr = sagaParam.Get_Description()

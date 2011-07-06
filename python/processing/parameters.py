@@ -20,6 +20,7 @@
 #   MA 02110-1301, USA.
 
 import PyQt4.QtGui as QtGui
+from qgis.core import QgsMapLayer, QgsVectorLayer, QgsRasterLayer
 
 class Parameter:
     class Role:
@@ -108,5 +109,23 @@ class PathParameter(StringParameter):
 				 defaultValue = ".", role = None):
         StringParameter.__init__(self, name, description,
 				 defaultValue, role)
-                 
+
+class LayerParameter(Parameter):
+    def __init__(self, name, pType = QgsMapLayer, description = None,
+				 defaultValue = [], role = None):
+        Parameter.__init__(self, name, pType, description,
+				 defaultValue, role)
+
+class VectorLayerParameter(LayerParameter):
+    def __init__(self, name, description = None,
+				 defaultValue = [], role = None):
+        LayerParameter.__init__(self, name, QgsVectorLayer, description,
+				 defaultValue, role)
+
+class RasterLayerParameter(LayerParameter):
+    def __init__(self, name, description = None,
+				 defaultValue = [], role = None):
+        LayerParameter.__init__(self, name, QgsRasterLayer, description,
+				 defaultValue, role)
+
 Validator = QtGui.QValidator

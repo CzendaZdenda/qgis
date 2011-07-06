@@ -19,8 +19,7 @@
 #   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #   MA 02110-1301, USA.
 
-from PyQt4.QtGui import QDockWidget, QTreeWidgetItem, QDialog
-from PyQt4.QtGui import QSpinBox, QLineEdit, QCheckBox, QComboBox
+from PyQt4.QtGui import *
 from PyQt4.QtCore import QObject, SIGNAL, Qt
 from ui_dialog import Ui_runDialog
 from ui_panel import Ui_dock
@@ -83,6 +82,7 @@ class Panel(QDockWidget, Ui_dock):
 class Dialog(QDialog, Ui_runDialog):
     def __init__(self, iface, module):
         QDialog.__init__(self, iface.mainWindow())
+        self.canvas = iface.mapCanvas()
         self.moduleinstance = processing.ModuleInstance(module)
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
@@ -90,7 +90,7 @@ class Dialog(QDialog, Ui_runDialog):
         self._widgets = set()
         for param, value in self.moduleinstance.parameters().items():
             widget = self.widgetByType(param, value)
-            self._widgets.add(widget)
+            #self._widgets.add(widget)
             if widget is not None:
                 self.form.addRow(param.name(), widget)
     def widgetByType(self, param, value):
@@ -114,5 +114,34 @@ class Dialog(QDialog, Ui_runDialog):
             w.addItems(param.choices())
             w.setCurrentIndex(value)
             return w
+        if pc == PathParameter:
+            w = FileSelector()
+            return w
+        if (pc == LayerParameter or
+            pc == VectorLayerParameter or
+            pc == RasterLayerParameter):
+            layers = self.canvas.layers()
+            layerNames = [l.name() for l in layers]
+            if param.role == Parameter.Role.output:
+                layerNames = [self.tr("[create]")] + layerNames
+            w = QComboBox(None)
+            w.addItems(layerNames)
+            return w
         w = QLineEdit(str(value), None)
         return w
+
+class FileSelector(QHBoxLayout):
+    def __init__(self, path = None, parent = None):
+        QHBoxLayout.__init__(self, parent)
+        self.lineEdit = QLineEdit(parent)
+        self.button = QPushButton(self.tr("Browse..."), parent)
+        QObject.connect(self.button,
+            SIGNAL("clicked()"), self.onButtonClicked)
+        self.addWidget(self.lineEdit)
+        self.addWidget(self.button)
+    def onButtonClicked(self):
+        self.setPath(QFileDialog.getOpenFileName(self.button))
+    def setPath(self, path):
+        self.lineEdit.setText(path)
+    def path(self):
+        return self.lineEdit.text()

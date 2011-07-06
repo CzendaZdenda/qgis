@@ -20,10 +20,10 @@
 #   MA 02110-1301, USA.
 
 def name():
-    return "Processing Framework Module"
+    return "Processing Framework Manager"
 
 def description():
-    return "QGIS Processing Framework Manager"
+    return "Lists available modules sorted by tag in a panel."
     
 def icon():
     return "processing.png"

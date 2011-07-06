@@ -124,6 +124,7 @@ class Module(processing.Module):
                 choices = [sagaParam.Get_Item(i) for i in
                     range(sagaParam.Get_Count())]
                 qgisParam.setChoices(choices)
+                qgisParam.setValue(0)
             self._parameters.add(qgisParam)
         except KeyError:
             self._parameters.add(Parameter(name, descr, str))

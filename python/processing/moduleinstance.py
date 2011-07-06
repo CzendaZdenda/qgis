@@ -22,8 +22,9 @@
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
 
-class ModuleInstance:
+class ModuleInstance(QtCore.QObject):
     def __init__(self, module):
+        QtCore.QObject.__init__(self)
         self._module = module
         self._parameters = None
         self.value = self.__getitem__
@@ -38,10 +39,16 @@ class ModuleInstance:
     def __getitem__(self, key):
         return self._parameters[key]
     def __setitem__(self, key, value):
+        # if there is no change, validator is not invoked & no signal
+        # emitted
+        if value == self.__getitem__(key):
+            return
         validator = key.validator()
         if validator is not None:
             state, _ = validator.validate(str(value), 0)
             if state != QtGui.QValidator.Acceptable:
                 return
-        self.emit(PYSIGNAL("valueChanged"), (key, value))
+        self.emit(self.valueChangedSignal(key), value)
         self._parameters[key] = value
+    def valueChangedSignal(self, param):
+        return QtCore.SIGNAL("%s.valueChanged%s" % (id(self), id(param)))

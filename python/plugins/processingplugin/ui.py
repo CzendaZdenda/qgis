@@ -24,6 +24,7 @@ from PyQt4.QtCore import QObject, SIGNAL, Qt
 from ui_dialog import Ui_runDialog
 from ui_panel import Ui_dock
 import processing
+from processing.parameters import *
 
 class Panel(QDockWidget, Ui_dock):
     def __init__(self, iface):
@@ -87,14 +88,24 @@ class Dialog(QDialog, Ui_runDialog):
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
         self.text.setText(module.description())
-        self._widgets = set()
+        self.rebuildDialog()
+        QObject.connect(self.moduleinstance,
+            SIGNAL("parametersChanged"), self.rebuildDialog)
+    def rebuildDialog(self):
         for param, value in self.moduleinstance.parameters().items():
-            widget = self.widgetByType(param, value)
-            #self._widgets.add(widget)
-            if widget is not None:
-                self.form.addRow(param.name(), widget)
-    def widgetByType(self, param, value):
-        from processing.parameters import *
+            widget = self._widgetByType(param, value)
+            self.form.addRow(param.name(), widget)
+    def _connectWidgetToParameter(self, widget,
+        param, signal, setter, getter):
+        instance = self.moduleinstance
+        QObject.connect(widget, SIGNAL(signal),
+            lambda v: instance.__setitem__(param, v))
+            # only change the widget's value if it is different to
+            # prevent circular signaling.
+        valueSet = lambda v: v == getter(widget) or setter(widget, v)
+        QObject.connect(instance, instance.valueChangedSignal(param),
+            valueSet)
+    def _widgetByType(self, param, value):
         try:
             w = param.widget(param, value)
             return w
@@ -104,15 +115,24 @@ class Dialog(QDialog, Ui_runDialog):
         if pc == NumericParameter:
             w = QSpinBox(None)
             w.setValue(value)
+            self._connectWidgetToParameter(w, param,
+                "valueChanged(int)", QSpinBox.setValue, QSpinBox.value)
             return w
         if pc == BooleanParameter:
             w = QCheckBox(None)
             w.setChecked(value)
+            self._connectWidgetToParameter(w, param,
+                "toggled(bool)",
+                QCheckBox.setChecked, QCheckBox.checked)
             return w
         if pc == ChoiceParameter:
             w = QComboBox(None)
             w.addItems(param.choices())
             w.setCurrentIndex(value)
+            self._connectWidgetToParameter(w, param,
+                "currentIndexChanged(int)",
+                QComboBox.setCurrentIndex,
+                QComboBox.currentIndex)
             return w
         if pc == PathParameter:
             w = FileSelector()
@@ -126,9 +146,16 @@ class Dialog(QDialog, Ui_runDialog):
                 layerNames = [self.tr("[create]")] + layerNames
             w = QComboBox(None)
             w.addItems(layerNames)
+            self._connectWidgetToParameter(w, param,
+                "currentIndexChanged(int)",
+                QComboBox.setCurrentIndex,
+                QComboBox.currentIndex)
             return w
-        w = QLineEdit(str(value), None)
-        return w
+        if True: # default case
+            w = QLineEdit(str(value), None)
+            self._connectWidgetToParameter(w, param,
+                "textChanged(str)", QLineEdit.setText, QLineEdit.text)
+            return w
 
 class FileSelector(QHBoxLayout):
     def __init__(self, path = None, parent = None):

@@ -50,6 +50,8 @@
 #include <QBuffer>
 #include <QPrinter>
 #include <QSvgGenerator>
+#include <QUrl>
+#include <QPaintEngine>
 
 QgsWMSServer::QgsWMSServer( std::map<QString, QString> parameters, QgsMapRenderer* renderer )
     : mParameterMap( parameters )
@@ -106,15 +108,12 @@ QDomDocument QgsWMSServer::getCapabilities()
   //Some client requests already have http://<SERVER_NAME> in the REQUEST_URI variable
   QString hrefString;
   QString requestUrl = getenv( "REQUEST_URI" );
-  requestUrl.truncate( requestUrl.indexOf( "?" ) + 1 );
-  if ( requestUrl.contains( "http" ) )
-  {
-    hrefString = requestUrl;
-  }
-  else
-  {
-    hrefString = "http://" + QString( getenv( "SERVER_NAME" ) ) + requestUrl;
-  }
+  QUrl mapUrl( requestUrl );
+  mapUrl.setHost( QString( getenv( "SERVER_NAME" ) ) );
+  mapUrl.removeQueryItem( "REQUEST" );
+  mapUrl.removeQueryItem( "VERSION" );
+  mapUrl.removeQueryItem( "SERVICE" );
+  hrefString = mapUrl.toString();
 
 
   // SOAP platform
@@ -210,13 +209,15 @@ QDomDocument QgsWMSServer::getCapabilities()
   }
   QgsDebugMsg( "layersAndStylesCapabilities returned" );
 
+#if 0
   //for debugging: save the document to disk
-  /*QFile capabilitiesFile( QDir::tempPath() + "/capabilities.txt" );
+  QFile capabilitiesFile( QDir::tempPath() + "/capabilities.txt" );
   if ( capabilitiesFile.open( QIODevice::WriteOnly | QIODevice::Text ) )
   {
     QTextStream capabilitiesStream( &capabilitiesFile );
     doc.save( capabilitiesStream, 4 );
-  }*/
+  }
+#endif
   return doc;
 }
 
@@ -325,12 +326,12 @@ QDomDocument QgsWMSServer::getStyle()
   std::map<QString, QString>::const_iterator style_it = mParameterMap.find( "STYLE" );
   if ( style_it == mParameterMap.end() )
   {
-    throw QgsMapServiceException( "StyleNotSpecified", "Style is manadatory for GetStyle operation" );
+    throw QgsMapServiceException( "StyleNotSpecified", "Style is mandatory for GetStyle operation" );
   }
   std::map<QString, QString>::const_iterator layer_it = mParameterMap.find( "LAYER" );
   if ( layer_it == mParameterMap.end() )
   {
-    throw QgsMapServiceException( "LayerNotSpecified", "Layer is manadatory for GetStyle operation" );
+    throw QgsMapServiceException( "LayerNotSpecified", "Layer is mandatory for GetStyle operation" );
   }
 
   QString styleName = style_it->second;
@@ -338,6 +339,38 @@ QDomDocument QgsWMSServer::getStyle()
 
   return mConfigParser->getStyle( styleName, layerName );
 }
+
+// Hack to workaround Qt #5114 by disabling PatternTransform
+class QgsPaintEngineHack : public QPaintEngine
+{
+  public:
+    void fixFlags()
+    {
+      gccaps = 0;
+      gccaps |= ( QPaintEngine::PrimitiveTransform
+                  // | QPaintEngine::PatternTransform
+                  | QPaintEngine::PixmapTransform
+                  | QPaintEngine::PatternBrush
+                  // | QPaintEngine::LinearGradientFill
+                  // | QPaintEngine::RadialGradientFill
+                  // | QPaintEngine::ConicalGradientFill
+                  | QPaintEngine::AlphaBlend
+                  // | QPaintEngine::PorterDuff
+                  | QPaintEngine::PainterPaths
+                  | QPaintEngine::Antialiasing
+                  | QPaintEngine::BrushStroke
+                  | QPaintEngine::ConstantOpacity
+                  | QPaintEngine::MaskedBrush
+                  // | QPaintEngine::PerspectiveTransform
+                  | QPaintEngine::BlendModes
+                  // | QPaintEngine::ObjectBoundingModeGradients
+#if QT_VERSION >= 0x040500
+                  | QPaintEngine::RasterOpModes
+#endif
+                  | QPaintEngine::PaintOutsidePaintEvent
+                );
+    }
+};
 
 QByteArray* QgsWMSServer::getPrint( const QString& formatString )
 {
@@ -431,6 +464,14 @@ QByteArray* QgsWMSServer::getPrint( const QString& formatString )
     printer.setPaperSize( QSizeF( c->paperWidth(), c->paperHeight() ), QPrinter::Millimeter );
     QRectF paperRectMM = printer.pageRect( QPrinter::Millimeter );
     QRectF paperRectPixel = printer.pageRect( QPrinter::DevicePixel );
+
+    QPaintEngine *engine = printer.paintEngine();
+    if ( engine )
+    {
+      QgsPaintEngineHack *hack = static_cast<QgsPaintEngineHack*>( engine );
+      hack->fixFlags();
+    }
+
     QPainter p( &printer );
     if ( c->printAsRaster() ) //embed one raster into the pdf
     {

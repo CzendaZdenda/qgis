@@ -23,7 +23,7 @@ def name():
     return "Processing Framework Module"
 
 def description():
-    return "QGis Processing Framework Manager"
+    return "QGIS Processing Framework Manager"
     
 def icon():
     return "processing.png"
@@ -32,7 +32,7 @@ def version():
     return "Version 0.1"
     
 def qgisMinimumVersion():
-    return "1.0"
+    return "1.5" # required by MapCanvas.layers()
     
 def authorName():
     return "Camilo Polymeris & Julien Malik"

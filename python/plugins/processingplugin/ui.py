@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#	QGIS Processing Framework
+#	QGIS Processing panel plugin.
 #
 #	gui/__init__.py (C) Camilo Polymeris
 #	
@@ -112,7 +112,7 @@ class Dialog(QDialog, Ui_runDialog):
         if pc == ChoiceParameter:
             w = QComboBox(None)
             w.addItems(param.choices())
-            w.setCurrentItem(value)
+            w.setCurrentIndex(value)
             return w
         w = QLineEdit(str(value), None)
         return w

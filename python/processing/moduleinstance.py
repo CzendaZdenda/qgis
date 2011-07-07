@@ -21,6 +21,7 @@
 
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
+from parameters import StateParameter
 
 class ModuleInstance(QtCore.QObject):
     def __init__(self, module):
@@ -29,18 +30,27 @@ class ModuleInstance(QtCore.QObject):
         self._parameters = None
         self.value = self.__getitem__
         self.setValue = self.__setitem__
+        self.stateParameter = StateParameter()
     def module(self):
         return self._module
     def parameters(self):
         if self._parameters is None:
-            self._parameters = dict([(p, p.defaultValue())
-                for p in self.module().parameters()])
+            p = [(p, p.defaultValue()) for p in
+                self.module().parameters()]
+            p += [(self.stateParameter, StateParameter.State.stopped)]
+            self._parameters = dict(p)
         return self._parameters
+    def state(self):
+        return self[self.stateParameter]
+    def setState(self, state):
+        print "!"
+        self[self.stateParameter] = state
     def __getitem__(self, key):
         return self._parameters[key]
     def __setitem__(self, key, value):
         # if there is no change, validator is not invoked & no signal
         # emitted
+        print "p: %s, v: %s" % (str(key), str(value))
         if value == self.__getitem__(key):
             return
         validator = key.validator()

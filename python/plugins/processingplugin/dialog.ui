@@ -23,7 +23,7 @@
       <enum>Qt::Vertical</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok|QDialogButtonBox::Open|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Open|QDialogButtonBox::Save</set>
      </property>
     </widget>
    </item>

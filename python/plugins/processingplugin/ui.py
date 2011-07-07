@@ -88,18 +88,26 @@ class Dialog(QDialog, Ui_runDialog):
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
         self.text.setText(module.description())
+        execButton = QPushButton(self.tr("&Execute"));
+        execButton.setDefault(True)
+        self.buttons.addButton(execButton, QDialogButtonBox.ActionRole);
         self.rebuildDialog()
+        # Rebuild the dialog if parameter structure changes.
         QObject.connect(self.moduleinstance,
             SIGNAL("parametersChanged"), self.rebuildDialog)
+        # Start module instance on button click
+        QObject.connect(execButton, SIGNAL("clicked()"),
+            self._onExecButtonClicked)
     def rebuildDialog(self):
         for param, value in self.moduleinstance.parameters().items():
             widget = self._widgetByType(param, value)
-            self.form.addRow(param.name(), widget)
+            if widget is not None:
+                self.form.addRow(param.name(), widget)
     def _connectWidgetToParameter(self, widget,
         param, signal, setter, getter):
         instance = self.moduleinstance
         QObject.connect(widget, SIGNAL(signal),
-            lambda v: instance.__setitem__(param, v))
+            lambda v: instance.setValue(param, v))
             # only change the widget's value if it is different to
             # prevent circular signaling.
         valueSet = lambda v: v == getter(widget) or setter(widget, v)
@@ -112,6 +120,8 @@ class Dialog(QDialog, Ui_runDialog):
         except AttributeError:
             pass
         pc = param.__class__
+        if pc == StateParameter:
+            return None
         if pc == NumericParameter:
             w = QSpinBox(None)
             w.setValue(value)
@@ -123,7 +133,7 @@ class Dialog(QDialog, Ui_runDialog):
             w.setChecked(value)
             self._connectWidgetToParameter(w, param,
                 "toggled(bool)",
-                QCheckBox.setChecked, QCheckBox.checked)
+                QCheckBox.setChecked, QCheckBox.isChecked)
             return w
         if pc == ChoiceParameter:
             w = QComboBox(None)
@@ -136,6 +146,10 @@ class Dialog(QDialog, Ui_runDialog):
             return w
         if pc == PathParameter:
             w = FileSelector()
+            self._connectWidgetToParameter(w.lineEdit, param,
+                "textChanged(QString)",
+                FileSelector.setPath,
+                FileSelector.path)
             return w
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
@@ -154,8 +168,11 @@ class Dialog(QDialog, Ui_runDialog):
         if True: # default case
             w = QLineEdit(str(value), None)
             self._connectWidgetToParameter(w, param,
-                "textChanged(str)", QLineEdit.setText, QLineEdit.text)
+                "textChanged(QString)", QLineEdit.setText, QLineEdit.text)
             return w
+    def _onExecButtonClicked(self):
+        print "x"
+        self.moduleinstance.setState(StateParameter.State.running)
 
 class FileSelector(QHBoxLayout):
     def __init__(self, path = None, parent = None):

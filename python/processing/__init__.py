@@ -103,13 +103,8 @@ class Module:
             self._name = name
             self._description = description
             self._tags = tags
-            self._stateParameter = parameters.StateParameter()
     def name(self):
         return self._name
-    def state(self):
-        return self._stateParameter
-    def setState(self, state):
-        self._stateParameter.setValue(state)
     def description(self):
         """ The modules description string.
         If no description is provided on construction, returns an empty

@@ -60,7 +60,7 @@ class ProcessingPlugin:
         if self.panel is not None:
             self.panel.setVisible(False)
     def showPanel(self, visible = True):
-        from ui import Panel
+        from panel import Panel
         from PyQt4.QtCore import QObject, SIGNAL
         if not self.panel:
             self.panel = Panel(self._iface)
@@ -71,4 +71,3 @@ class ProcessingPlugin:
 
 def classFactory(iface):
     return ProcessingPlugin(iface)
-

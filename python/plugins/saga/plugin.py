@@ -141,5 +141,3 @@ class Module(processing.Module):
         return self._parameters
     def tags(self):
         return processing.Module.tags(self) | set([processing.Tag('saga')])
-
-

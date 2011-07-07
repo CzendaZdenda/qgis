@@ -24,6 +24,8 @@ import PyQt4.QtCore as QtCore
 from parameters import StateParameter
 
 class ModuleInstance(QtCore.QObject):
+    """ Represents a single setup and execution of a module.
+    """
     def __init__(self, module):
         QtCore.QObject.__init__(self)
         self._module = module
@@ -34,6 +36,8 @@ class ModuleInstance(QtCore.QObject):
     def module(self):
         return self._module
     def parameters(self):
+        """ Returns a dict of parameters to (default) values.
+        """
         if self._parameters is None:
             p = [(p, p.defaultValue()) for p in
                 self.module().parameters()]
@@ -43,14 +47,12 @@ class ModuleInstance(QtCore.QObject):
     def state(self):
         return self[self.stateParameter]
     def setState(self, state):
-        print "!"
         self[self.stateParameter] = state
     def __getitem__(self, key):
         return self._parameters[key]
     def __setitem__(self, key, value):
         # if there is no change, validator is not invoked & no signal
         # emitted
-        print "p: %s, v: %s" % (str(key), str(value))
         if value == self.__getitem__(key):
             return
         validator = key.validator()
@@ -60,5 +62,14 @@ class ModuleInstance(QtCore.QObject):
                 return
         self.emit(self.valueChangedSignal(key), value)
         self._parameters[key] = value
-    def valueChangedSignal(self, param):
-        return QtCore.SIGNAL("%s.valueChanged%s" % (id(self), id(param)))
+    def valueChangedSignal(self, param = None):
+        """ Returns the signal emited when a parameter's value changes.
+        (Doesn't emit it)
+        The value is passed to the slot, not so the parameter.
+        If no parameter is specified, a "parametersChanged" signal is
+        returned which should be emitted when the parameter structure
+        changes, e.g. parameters are added, renamed or removed.
+        """
+        if param is None:
+            return QtCore.SIGNAL("parametersChanged")
+        return QtCore.SIGNAL("valueChanged%s" % id(param))

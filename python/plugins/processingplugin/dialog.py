@@ -2,7 +2,7 @@
 
 #	QGIS Processing panel plugin.
 #
-#	gui/__init__.py (C) Camilo Polymeris
+#	dialog.py (C) Camilo Polymeris
 #	
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -20,65 +20,10 @@
 #   MA 02110-1301, USA.
 
 from PyQt4.QtGui import *
-from PyQt4.QtCore import QObject, SIGNAL, Qt
+from PyQt4.QtCore import QObject, SIGNAL
 from ui_dialog import Ui_runDialog
-from ui_panel import Ui_dock
 import processing
 from processing.parameters import *
-
-class Panel(QDockWidget, Ui_dock):
-    def __init__(self, iface):
-        QDockWidget.__init__(self, iface.mainWindow())
-        self._iface = iface
-        self._dialogs = list()
-        self.setupUi(self)
-        tags = processing.framework.representativeTags()
-        self.buildModuleList(tags)
-    	QObject.connect(self.moduleList,
-			SIGNAL("itemActivated(QTreeWidgetItem *, int)"),
-			self.onItemActivated)
-        self.setFloating(False)
-        self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
-    ## The TreeWidget's items:
-    class TagItem(QTreeWidgetItem):
-        """ First hierarchical level: order by tags """
-        def __init__(self, parent, tag = "other"):
-            QTreeWidgetItem.__init__(self, parent, [tag])
-    class ModuleItem(QTreeWidgetItem):
-        """ Second hierarchical level: modules by name """
-        def __init__(self, module):
-            QTreeWidgetItem.__init__(self,[module.name()])
-            self._module = module
-        def module(self):
-            return self._module
-    def buildModuleList(self, tags):
-        """ Construct the tree of modules. """
-        topNode = self.moduleList
-        topNode.clear()
-        # a set of modules not yet added to the list
-        pending = set(processing.framework.modules())
-        # add a node for each tag
-        for tag in tags:
-            tagNode = Panel.TagItem(topNode, tag)
-            # and its children
-            #, sorted alphabetically
-            modules = sorted(processing.framework.modulesByTag(tag),
-                key=lambda x: x.name())
-            for mod in modules:
-                modNode = Panel.ModuleItem(mod)
-                tagNode.addChild(modNode)
-                pending.discard(mod)
-        # add non-tagged modules
-        tagNode = Panel.TagItem(topNode)
-        for mod in sorted(pending, key=lambda x: x.name()):
-            modNode = Panel.ModuleItem(mod)
-            tagNode.addChild(modNode)
-    def onItemActivated(self, item, _):
-        """ This slot pops up the relevant dialog. """
-        if type(item) is Panel.ModuleItem:
-            dialog = Dialog(self._iface, item.module())
-            self._dialogs.append(dialog)
-            dialog.show()
 
 class Dialog(QDialog, Ui_runDialog):
     def __init__(self, iface, module):
@@ -94,7 +39,8 @@ class Dialog(QDialog, Ui_runDialog):
         self.rebuildDialog()
         # Rebuild the dialog if parameter structure changes.
         QObject.connect(self.moduleinstance,
-            SIGNAL("parametersChanged"), self.rebuildDialog)
+            self.moduleinstance.valueChangedSignal(),
+            self.rebuildDialog)
         # Start module instance on button click
         QObject.connect(execButton, SIGNAL("clicked()"),
             self._onExecButtonClicked)
@@ -148,8 +94,8 @@ class Dialog(QDialog, Ui_runDialog):
             w = FileSelector()
             self._connectWidgetToParameter(w.lineEdit, param,
                 "textChanged(QString)",
-                FileSelector.setPath,
-                FileSelector.path)
+                QLineEdit.setText,
+                QLineEdit.text)
             return w
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
@@ -171,7 +117,6 @@ class Dialog(QDialog, Ui_runDialog):
                 "textChanged(QString)", QLineEdit.setText, QLineEdit.text)
             return w
     def _onExecButtonClicked(self):
-        print "x"
         self.moduleinstance.setState(StateParameter.State.running)
 
 class FileSelector(QHBoxLayout):

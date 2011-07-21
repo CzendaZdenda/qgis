@@ -99,6 +99,8 @@ class Module(processing.Module):
         processing.Module.__init__(self,
             self.module.Get_Name(),
             self.module.Get_Description())
+    def instance(self):
+        return ModuleInstance(self)
     def addParameter(self, sagaParam):
         sagaToQGisParam = {
             #saga.PARAMETER_TYPE_Node:  ParameterList,
@@ -141,3 +143,17 @@ class Module(processing.Module):
         return self._parameters
     def tags(self):
         return processing.Module.tags(self) | set([processing.Tag('saga')])
+
+class ModuleInstance(processing.ModuleInstance):
+    def __init__(self, module):
+        processing.ModuleInstance.__init__(self, module)
+        QObject.connect(
+            self, self.valueChangedSignal(self.stateParameter),
+            self.stateParameterValueChanged)
+    def stateParameterValueChanged(self, state):
+        """ Only reacts to start running state, ignore others.
+        """
+        sm = self.module().module # the SAGA module
+        if state != self.stateParameter.State.running:
+            return
+        print "Module instance %s started." % self.module().name()

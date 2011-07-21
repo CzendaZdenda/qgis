@@ -29,7 +29,7 @@ class Dialog(QDialog, Ui_runDialog):
     def __init__(self, iface, module):
         QDialog.__init__(self, iface.mainWindow())
         self.canvas = iface.mapCanvas()
-        self.moduleinstance = processing.ModuleInstance(module)
+        self.moduleinstance = module.instance()
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
         self.text.setText(module.description())

@@ -27,6 +27,11 @@ class ModuleInstance(QtCore.QObject):
     """ Represents a single setup and execution of a module.
     """
     def __init__(self, module):
+        """ Module.instance() calls this constructor.
+        If you need to provide custom functionality, you can instantiate
+        a derived class there.
+        TODO: that's a very unelegant way to do this. Correct.
+        """
         QtCore.QObject.__init__(self)
         self._module = module
         self._parameters = None

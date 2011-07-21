@@ -103,6 +103,11 @@ class Module:
             self._name = name
             self._description = description
             self._tags = tags
+    def instance(self):
+        """ Return a new module instance.
+        Call this instead of the ModuleInstance constructor.
+        """
+        return ModuleInstance(self)
     def name(self):
         return self._name
     def description(self):

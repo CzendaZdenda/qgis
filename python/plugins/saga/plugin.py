@@ -96,11 +96,13 @@ class Module(processing.Module):
         elif self.interactive:
             self.module = lib.Get_Module_I(i)
         self._parameters = None
+        # only one instance per SAGA module
+        self._instance = ModuleInstance(self)
         processing.Module.__init__(self,
             self.module.Get_Name(),
             self.module.Get_Description())
     def instance(self):
-        return ModuleInstance(self)
+        return self._instance
     def addParameter(self, sagaParam):
         sagaToQGisParam = {
             #saga.PARAMETER_TYPE_Node:  ParameterList,
@@ -127,9 +129,15 @@ class Module(processing.Module):
                     range(sagaParam.Get_Count())]
                 qgisParam.setChoices(choices)
                 qgisParam.setValue(0)
-            self._parameters.add(qgisParam)
         except KeyError:
-            self._parameters.add(Parameter(name, descr, str))
+            qgisParam = Parameter(name, descr, str)
+        self._parameters.add(qgisParam)
+        # register callback to instance for parameter
+        QObject.connect(self._instance,
+            self._instance.valueChangedSignal(qgisParam),
+            lambda x: self.onParameterChanged(sagaParam, x))
+    def onParameterChanged(self, sagaParam, value):
+        sagaParam.Set_Value(value)
     def parameters(self):
         if self._parameters is not None:
             return self._parameters
@@ -156,4 +164,8 @@ class ModuleInstance(processing.ModuleInstance):
         sm = self.module().module # the SAGA module
         if state != self.stateParameter.State.running:
             return
-        print "Module instance %s started." % self.module().name()
+        print "Module instance '%s' execution started." % self.module().name()
+        if sm.Execute():
+            print "Module execution suceeded."
+        else:
+            print "Module execution failed."

@@ -46,9 +46,15 @@ class Dialog(QDialog, Ui_runDialog):
             self._onExecButtonClicked)
     def rebuildDialog(self):
         for param, value in self.moduleinstance.parameters().items():
+            label = param.name()
+            if not param.isMandatory(): # optional parameters in italics
+                label = '<i>%s</i>' % label
+            if param.role() == Parameter.Role.output:
+                label = '&gt; %s' % label
+            label = '<html>%s</html>' % label
             widget = self._widgetByType(param, value)
             if widget is not None:
-                self.form.addRow(param.name(), widget)
+                self.form.addRow(label, widget)
     def _connectWidgetToParameter(self, widget,
         param, signal, setter, getter):
         instance = self.moduleinstance

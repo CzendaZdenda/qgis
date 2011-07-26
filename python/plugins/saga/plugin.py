@@ -120,8 +120,13 @@ class Module(processing.Module):
         name = sagaParam.Get_Name()
         descr = sagaParam.Get_Description()
         typ = sagaParam.Get_Type()
+        if sagaParam.is_Output():
+            role = Parameter.Role.output
+        else:
+            role = Parameter.Role.input
+        mandatory = not sagaParam.is_Optional()
         try:
-            qgisParamTyp = sagaToQGisParam[typ]
+            qgisParamTyp = sagaToQGisParam[typ]            
             qgisParam = qgisParamTyp(name, descr)
             if qgisParamTyp == ChoiceParameter:
                 sagaParam = sagaParam.asChoice()
@@ -131,6 +136,8 @@ class Module(processing.Module):
                 qgisParam.setValue(0)
         except KeyError:
             qgisParam = Parameter(name, descr, str)
+        qgisParam.setRole(role)
+        qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)
         # register callback to instance for parameter
         QObject.connect(self._instance,

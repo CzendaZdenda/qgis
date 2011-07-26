@@ -24,28 +24,34 @@ from qgis.core import QgsMapLayer, QgsVectorLayer, QgsRasterLayer
 
 class Parameter:
     class Role:
-        input, output, option, feedback = 1, 2, 3, 4
+        input, output, control, feedback = 1, 2, 3, 4
     class UserLevel:
         basic, advanced = 1, 2
     def __init__(self, name, pType, description = None,
-                 defaultValue = None, role = None):
+                 defaultValue = None, role = None,
+                 mandatory = True):
         self._name = name
         self._description = description
         self._type = pType
         self._defaultValue = defaultValue
         self._role = role
+        self._mandatory = mandatory
     def name(self):
         return self._name
     def description(self):
         return self._description
     def type(self):
         return self._type
+    def setRole(self, role):
+        self._role = role
     def role(self):
         return self._role
     def userLevel(self):
         return UserLevel.basic
+    def setMandatory(self, mandatory):
+        self._mandatory = mandatory
     def isMandatory(self):
-        return False
+        return self._mandatory
     def defaultValue(self):
         if self._defaultValue is not None:
             return self._defaultValue
@@ -73,7 +79,7 @@ class StateParameter(Parameter):
         stopped, running = 1, 2
     def __init__(self, defaultValue = State.stopped):
         Parameter.__init__(self, "State", int, "",
-				 defaultValue, Parameter.Role.option)
+				 defaultValue, Parameter.Role.control)
 
 class NumericParameter(Parameter):
     def __init__(self, name, description = None,

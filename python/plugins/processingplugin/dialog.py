@@ -108,7 +108,7 @@ class Dialog(QDialog, Ui_runDialog):
             pc == RasterLayerParameter):
             layers = self.canvas.layers()
             layerNames = [l.name() for l in layers]
-            if param.role == Parameter.Role.output:
+            if param.role() == Parameter.Role.output:
                 layerNames = [self.tr("[create]")] + layerNames
             w = QComboBox(None)
             w.addItems(layerNames)

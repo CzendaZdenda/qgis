@@ -43,12 +43,12 @@ def getLibraryPaths():
     raise RuntimeError("No SAGA modules found in %s." % paths)
 
 class SAGAPlugin:
-    def __init__(self, _):
+    def __init__(self, iface):
         self.libraries = list()
         self._modules = None
         for p in getLibraryPaths():
             try:
-                self.libraries.append(Library(p))
+                self.libraries.append(Library(p, iface))
             except InvalidLibrary:
                 pass
     def initGui(self):
@@ -61,11 +61,12 @@ class InvalidLibrary(RuntimeError):
         RuntimeError.__init__(self, "Library invalid " + name + ".")
         
 class Library:
-    def __init__(self, filename):
+    def __init__(self, filename, iface = None):
         self.sagalib = saga.CSG_Module_Library(saga.CSG_String(filename))
         if not self.sagalib.is_Valid():
             raise InvalidLibrary(filename)
         self._modules = None
+        self.iface = iface
         processing.framework.registerModuleProvider(self)
     def modules(self):
         if self._modules is not None:
@@ -73,7 +74,7 @@ class Library:
         self._modules = set()
         for i in range(self.sagalib.Get_Count()):
             try:
-                self._modules.add(Module(self.sagalib, i))
+                self._modules.add(Module(self.sagalib, i, self.iface))
             except InvalidModule:
                 pass
         return self._modules
@@ -83,10 +84,11 @@ class InvalidModule(RuntimeError):
         RuntimeError.__init__(self, "Module invalid " + name + ".")
             
 class Module(processing.Module):
-    def __init__(self, lib, i):
+    def __init__(self, lib, i, iface = None):
         self.module = lib.Get_Module(i)
         if not self.module:
             raise InvalidModule("#" + str(i))
+        self.iface = iface
         self.interactive = self.module.is_Interactive()
         self.grid = self.module.is_Grid()
         if self.interactive and self.grid:
@@ -134,6 +136,24 @@ class Module(processing.Module):
                     range(sagaParam.Get_Count())]
                 qgisParam.setChoices(choices)
                 qgisParam.setValue(0)
+            elif qgisParamTyp == VectorLayerParameter:
+                # create a temporary vector layer
+                qgisParam.layer = saga.SG_Create_Shapes()
+                if role == Parameter.Role.output:
+                    self._instance.outLayer.append(qgisParam)
+                else:
+                    self._instance.inLayer.append(qgisParam)
+                sagaParam.Set_Value(qgisParam.layer)
+            elif qgisParamTyp == RasterLayerParameter:
+                # create a temporary raster layer
+                # what is the grid format?
+                qgisParam.layer = saga.SG_Create_Grid()
+                self._instance.outLayer.append(qgisParam)
+                if role == Parameter.Role.output:
+                    self._instance.outLayer.append(qgisParam)
+                else:
+                    self._instance.inLayer.append(qgisParam)
+                sagaParam.Set_Value(qgisParam.layer)
         except KeyError:
             qgisParam = Parameter(name, descr, str)
         qgisParam.setRole(role)
@@ -142,9 +162,21 @@ class Module(processing.Module):
         # register callback to instance for parameter
         QObject.connect(self._instance,
             self._instance.valueChangedSignal(qgisParam),
-            lambda x: self.onParameterChanged(sagaParam, x))
-    def onParameterChanged(self, sagaParam, value):
-        sagaParam.Set_Value(value)
+            lambda x: self.onParameterChanged(qgisParam, sagaParam, x))
+    def onParameterChanged(self, qgisParam, sagaParam, value):
+        pc = qgisParam.__class__
+        # special cases - layers, choices, files, etc.
+        if (pc == LayerParameter or
+            pc == VectorLayerParameter or
+            pc == RasterLayerParameter):
+            if qgisParam.role() == Parameter.Role.output:
+                # output layer, value is ignored, allways a new layer
+                # created
+                pass
+            else: # this is an input layer - TODO
+                pass
+        else: # generic case - numerics, booleans, etc.
+            sagaParam.Set_Value(value)
     def parameters(self):
         if self._parameters is not None:
             return self._parameters
@@ -165,14 +197,29 @@ class ModuleInstance(processing.ModuleInstance):
         QObject.connect(
             self, self.valueChangedSignal(self.stateParameter),
             self.stateParameterValueChanged)
+        self.inLayer = list()
+        self.outLayer = list()
     def stateParameterValueChanged(self, state):
         """ Only reacts to start running state, ignore others.
         """
         sm = self.module().module # the SAGA module
-        if state != self.stateParameter.State.running:
+        if state != StateParameter.State.running:
             return
         print "Module instance '%s' execution started." % self.module().name()
-        if sm.Execute():
+        if sm.Execute() != 0:
             print "Module execution suceeded."
+            # umm- what if there is no iface?
+            iface = self.module().iface
+            for param in self.outLayer:
+                basename = "qgis-saga%s" % id(param)
+                pc = param.__class__
+                if pc == VectorLayerParameter:
+                    # no implicit conversion!
+                    fn = saga.CSG_String("/tmp/%s.shp" % basename)
+                    param.layer.Save(fn)
+                    iface.addVectorLayer(fn.c_str(), basename, "ogr")
+                elif pc == RasterLayerParameter:
+                    pass
         else:
             print "Module execution failed."
+        self.stateParameter.setValue(StateParameter.State.stopped)

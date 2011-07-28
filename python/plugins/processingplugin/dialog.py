@@ -140,3 +140,27 @@ class FileSelector(QHBoxLayout):
         self.lineEdit.setText(path)
     def path(self):
         return self.lineEdit.text()
+
+class ListParameterBox(QGridLayout):
+    """ The getter parameter must be a function that returns a
+    string or QListWidgetItem when passed an instance of itemWidget.
+    """
+    def __init__(self, itemWidget, getter, parent = None):
+        QGridLayout.__init__(self, parent)
+        self.itemWidget = itemWidget
+        self.getter = getter
+        self.addButton = QPushButton(self.tr("Add"), parent)
+        self.removeButton = QPushButton(self.tr("Remove"), parent)
+        self.listBox = QListWidget(parent)
+        QObject.connect(self.addButton,
+            SIGNAL("clicked()"), self.onAddButtonClicked)
+        QObject.connect(self.removeButton,
+            SIGNAL("clicked()"), self.onRemoveButtonClicked)
+        self.addWidget(self.itemWidget, 0, 0)
+        self.addWidget(self.addButton, 0, 1)
+        self.addWidget(self.removeButton, 0, 2)
+        self.addWidget(self.listBox, 1, 0, -1, -1)
+    def onAddButtonClicked(self):
+        self.listBox.addItem(self.getter(self.itemWidget))
+    def onRemoveButtonClicked(self):
+        self.listBox.removeItemWidget(self.listBox.currentItem())

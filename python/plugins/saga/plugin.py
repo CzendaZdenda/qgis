@@ -155,7 +155,9 @@ class Module(processing.Module):
                     self._instance.inLayer.append(qgisParam)
                 sagaParam.Set_Value(qgisParam.layer)
         except KeyError:
-            qgisParam = Parameter(name, descr, str)
+            typeName = saga.SG_Parameter_Type_Get_Name(typ)
+            qgisParam = Parameter(name, str, descr,
+                "Unsupported parameter of type %s." % typeName)
         qgisParam.setRole(role)
         qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)

@@ -36,6 +36,9 @@ class Panel(QDockWidget, Ui_dock):
     	QObject.connect(self.moduleList,
 			SIGNAL("itemActivated(QTreeWidgetItem *, int)"),
 			self.onItemActivated)
+        QObject.connect(self.filterBox,
+            SIGNAL("editTextChanged(QString)"),
+            self.onFilterTextChanged)
         self.setFloating(False)
         self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
     ## The TreeWidget's items:
@@ -78,3 +81,10 @@ class Panel(QDockWidget, Ui_dock):
             dialog = Dialog(self._iface, item.module())
             self._dialogs.append(dialog)
             dialog.show()
+    def onFilterTextChanged(self, string):
+        # TODO: this will be converted to a proper filter when MVC
+        # is finally implemented
+        items = self.moduleList.findItems(string,
+            Qt.MatchContains)
+        if items:
+            self.moduleList.setCurrentItem(items[0])

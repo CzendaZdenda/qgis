@@ -69,29 +69,32 @@ class Parameter:
         return None
 
 class ParameterList(Parameter):
-    def __init__(self, name, description = None,
+    """ List of parameters with fixed type.
+    """
+    def __init__(self, name, itemType, description = None,
 				 defaultValue = [], role = None):
+        self._itemType = itemType
         Parameter.__init__(self, name, list, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class StateParameter(Parameter):
     class State:
         stopped, running = 1, 2
     def __init__(self, defaultValue = State.stopped):
         Parameter.__init__(self, "State", int, "",
-				 defaultValue, Parameter.Role.control)
+            defaultValue, Parameter.Role.control)
 
 class NumericParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = 0.0, role = None):
         Parameter.__init__(self, name, float, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class BooleanParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = False, role = None):
         Parameter.__init__(self, name, bool, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class ChoiceParameter(Parameter):
     def __init__(self, name, description = None,
@@ -108,30 +111,30 @@ class StringParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = "", role = None):
         Parameter.__init__(self, name, int, description,
-				 defaultValue, role)
+            defaultValue, role)
             
 class PathParameter(StringParameter):
     def __init__(self, name, description = None,
 				 defaultValue = ".", role = None):
         StringParameter.__init__(self, name, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class LayerParameter(Parameter):
     def __init__(self, name, pType = QgsMapLayer, description = None,
 				 defaultValue = [], role = None):
         Parameter.__init__(self, name, pType, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class VectorLayerParameter(LayerParameter):
     def __init__(self, name, description = None,
 				 defaultValue = [], role = None):
         LayerParameter.__init__(self, name, QgsVectorLayer, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 class RasterLayerParameter(LayerParameter):
     def __init__(self, name, description = None,
 				 defaultValue = [], role = None):
         LayerParameter.__init__(self, name, QgsRasterLayer, description,
-				 defaultValue, role)
+            defaultValue, role)
 
 Validator = QtGui.QValidator

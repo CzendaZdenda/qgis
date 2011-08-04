@@ -134,41 +134,35 @@ class Module(processing.Module):
             qgisParamTyp = sagaToQGisParam[typ]            
             qgisParam = qgisParamTyp(name, descr)
             if qgisParamTyp == ChoiceParameter:
-                sagaParam = sagaParam.asChoice()
-                choices = [sagaParam.Get_Item(i) for i in
-                    range(sagaParam.Get_Count())]
+                choiceParam = sagaParam.asChoice()
+                choices = [choiceParam.Get_Item(i) for i in
+                    range(choiceParam.Get_Count())]
                 qgisParam.setChoices(choices)
                 qgisParam.setValue(0)
-            elif qgisParamTyp == VectorLayerParameter:
-                # create a temporary vector layer
-                qgisParam.layer = saga.SG_Create_Shapes()
+                
+            elif (qgisParamTyp == VectorLayerParameter or
+                qgisParamTyp == RasterLayerParameter):
                 if role == Parameter.Role.output:
                     self._instance.outLayer.append(qgisParam)
                 else:
                     self._instance.inLayer.append(qgisParam)
-                # force a parameterChange slot call.
+                # force update of layer
                 self.onParameterChanged(qgisParam, sagaParam, 0)
-            elif qgisParamTyp == RasterLayerParameter:
-                # create a temporary raster layer
-                # what is the grid format?
-                qgisParam.layer = saga.SG_Create_Grid()
-                self._instance.outLayer.append(qgisParam)
-                if role == Parameter.Role.output:
-                    self._instance.outLayer.append(qgisParam)
-                else:
-                    self._instance.inLayer.append(qgisParam)
-                self.onParameterChanged(qgisParam, sagaParam, 0)
-        except KeyError:
+
+        except KeyError: # Parameter types not in the above dict.
             typeName = saga.SG_Parameter_Type_Get_Name(typ)
             qgisParam = Parameter(name, str, descr,
                 "Unsupported parameter of type %s." % typeName)
+                
         qgisParam.setRole(role)
         qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)
+        
         # register callback to instance for parameter
         QObject.connect(self._instance,
             self._instance.valueChangedSignal(qgisParam),
             lambda x: self.onParameterChanged(qgisParam, sagaParam, x))
+            
     def onParameterChanged(self, qgisParam, sagaParam, value):
         pc = qgisParam.__class__
         # special cases - layers, choices, files, etc.
@@ -176,25 +170,16 @@ class Module(processing.Module):
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
             if qgisParam.role() == Parameter.Role.output:
+                print "out!"
                 # output layer, value is ignored, allways a new layer
                 # created
                 pass
-            else:
-                layer = self.iface.mapCanvas().layer(value)
-                basename = "qgis-saga%s" % id(layer)
-                if pc == VectorLayerParameter:
-                    # no implicit conversion!
-                    fn = saga.CSG_String("/tmp/%s.shp" % basename)
-                    # save the layer
-                    QgsVectorFileWriter.writeAsShapefile(layer,
-                        fn.c_str(),  "CP1250", None)
-                    # load layer from file
-                    qgisParam.layer = saga.CSG_Shapes(fn)
-                elif pc == RasterLayerParameter:
-                    pass
-                sagaParam.Set_Value(qgisParam.layer)
+            else: # input layer
+                print "in!"
+                pass
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
+            
     def parameters(self):
         if self._parameters is not None:
             return self._parameters
@@ -241,7 +226,13 @@ class ModuleInstance(processing.ModuleInstance):
                     # TODO: where?
                     iface.addVectorLayer(fn.c_str(), basename, "ogr")
                 elif pc == RasterLayerParameter:
-                    pass
+                    # no implicit conversion!
+                    fn = saga.CSG_String("/tmp/%s.grd" % basename)
+                    # tell SAGA to save the layer
+                    param.layer.Save(fn)
+                    # load it into QGIS.
+                    # TODO: where?
+                    iface.addRasterLayer(fn.c_str(), basename)
         else:
             print "Module execution failed."
         self.stateParameter.setValue(StateParameter.State.stopped)

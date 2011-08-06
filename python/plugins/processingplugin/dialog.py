@@ -24,11 +24,18 @@ from PyQt4.QtCore import QObject, SIGNAL
 from ui_dialog import Ui_runDialog
 import processing
 from processing.parameters import *
+from qgis.core import *
 
 class Dialog(QDialog, Ui_runDialog):
     def __init__(self, iface, module):
         QDialog.__init__(self, iface.mainWindow())
-        self.canvas = iface.mapCanvas()
+        self.mapLayers = QgsMapLayerRegistry.instance().mapLayers()
+        self.vectorLayers = dict(filter(
+            lambda x: x.type() == QgsMapLayer.LayerType.VectorLayer,
+            self.mapLayers))
+        self.rasterLayers = dict(filter(
+            lambda x: x.type() == QgsMapLayer.LayerType.RasterLayer,
+            self.mapLayers))
         self.moduleinstance = module.instance()
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
@@ -103,11 +110,15 @@ class Dialog(QDialog, Ui_runDialog):
                 QLineEdit.setText,
                 QLineEdit.text)
             return w
+        if pc == LayerParameter:
+            layerNames = self.mapLayers.keys()
+        if pc == VectorLayerParameter:
+            layerNames = self.vectorLayers.keys()
+        if pc == RasterLayerParameter:
+            layerNames = self.rasterLayers.keys()
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
-            layers = self.canvas.layers()
-            layerNames = [l.name() for l in layers]
             if param.role() == Parameter.Role.output:
                 layerNames = [self.tr("[create]")] + layerNames
             w = QComboBox(None)

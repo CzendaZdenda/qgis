@@ -172,22 +172,7 @@ class Module(processing.Module):
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
-            layers = self.layerRegistry.mapLayers().values()
-            if pc == VectorLayerParameter:
-                layers = filter(
-                    lambda x: x.type() == QgsMapLayer.LayerType.VectorLayer,
-                    layers)
-            if pc == RasterLayerParameter:
-                layers = filter(
-                    lambda x: x.type() == QgsMapLayer.LayerType.RasterLayer,
-                    layers)
-            if qgisParam.role() == Parameter.Role.output:
-                if value is not 0:
-                    qgisParam.layer = layers[value - 1]
-                else:
-                    qgisParam.layer = None
-            else: # input layer
-                qgisParam.layer = layers[value]
+            qgisParam.layer = value
             qgisParam.sagaParam = sagaParam
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
@@ -236,13 +221,14 @@ class ModuleInstance(processing.ModuleInstance):
         # also export from qgis to saga
         for param in self.inLayer:
             pc = param.__class__
-            basename = "saga-qgis%s" % id(param.layer)                
+            basename = "qgis-saga%s" % id(param.layer)                
             if pc == VectorLayerParameter:
                 fn = saga.CSG_String("/tmp/%s.shp" % basename)
                 QgsVectorFileWriter.writeAsShapefile(param.layer,
                     fn.c_str(), "CP1250")
                 param.sagaParam.Set_Value(saga.SG_Create_Shapes(fn))
             if pc == RasterLayerParameter:
+                fn = saga.CSG_String("/tmp/%s.grd" % basename)
                 param.sagaParam.Set_Value(saga.SG_Create_Grid())
         
         print "Module instance '%s' execution started." % modName
@@ -252,7 +238,7 @@ class ModuleInstance(processing.ModuleInstance):
             iface = self.module().iface
             # now import output layers
             for param in self.outLayer:
-                basename = "saga-qgis%s" % id(param.layer)
+                basename = "saga-qgis%s" % id(param.sagaLayer)
                 pc = param.__class__
                 if pc == VectorLayerParameter:
                     # no implicit conversion!

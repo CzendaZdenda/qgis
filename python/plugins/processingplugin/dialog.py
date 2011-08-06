@@ -29,13 +29,15 @@ from qgis.core import *
 class Dialog(QDialog, Ui_runDialog):
     def __init__(self, iface, module):
         QDialog.__init__(self, iface.mainWindow())
-        self.mapLayers = QgsMapLayerRegistry.instance().mapLayers()
-        self.vectorLayers = dict(filter(
+        layerRegistry = QgsMapLayerRegistry.instance()
+        self.mapLayers = layerRegistry.mapLayers().values()
+        self.vectorLayers = filter(
             lambda x: x.type() == QgsMapLayer.LayerType.VectorLayer,
-            self.mapLayers))
-        self.rasterLayers = dict(filter(
+            self.mapLayers)
+        self.rasterLayers = filter(
             lambda x: x.type() == QgsMapLayer.LayerType.RasterLayer,
-            self.mapLayers))
+            self.mapLayers)
+        
         self.moduleinstance = module.instance()
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
@@ -111,22 +113,21 @@ class Dialog(QDialog, Ui_runDialog):
                 QLineEdit.text)
             return w
         if pc == LayerParameter:
-            layerNames = self.mapLayers.keys()
+            layers = self.mapLayers
         if pc == VectorLayerParameter:
-            layerNames = self.vectorLayers.keys()
+            layers = self.vectorLayers
         if pc == RasterLayerParameter:
-            layerNames = self.rasterLayers.keys()
+            layers = self.rasterLayers
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
             if param.role() == Parameter.Role.output:
-                layerNames = [self.tr("[create]")] + layerNames
-            w = QComboBox(None)
-            w.addItems(layerNames)
+                layers.append(None)
+            w = LayerComboBox(layers)
             self._connectWidgetToParameter(w, param,
-                "currentIndexChanged(int)",
-                QComboBox.setCurrentIndex,
-                QComboBox.currentIndex)
+                "currentLayerChanged",
+                LayerComboBox.setCurrentLayer,
+                LayerComboBox.currentLayer)
             return w
         if True: # default case
             w = QLineEdit(str(value), None)
@@ -151,6 +152,34 @@ class FileSelector(QHBoxLayout):
         self.lineEdit.setText(path)
     def path(self):
         return self.lineEdit.text()
+
+class LayerComboBox(QComboBox):
+    def __init__(self, layers, parent = None):
+        QComboBox.__init__(self, parent)
+        self.setLayers(layers)
+        self.connect(self, SIGNAL("currentIndexChanged(int)"),
+            self.onCurrentIndexChanged)
+    def setLayers(self, layers):
+        self.layers = layers
+        layerNames = list()
+        for l in self.layers:
+            if not l:
+                layerNames.append("[create]")
+            else:
+                layerNames.append(l.name())
+        self.clear()
+        self.addItems(layerNames)
+    def currentLayer(self):
+        return self.layers[self.currentIndex()]
+    def setCurrentLayer(self, layer):
+        try:
+            ix = self.layers.index(layer)
+        except:
+            self.layer.append(layer)
+            ix = self.layers.index(layer)
+        self.setCurrentIndex(ix)
+    def onCurrentIndexChanged(self, ix):
+        self.emit(SIGNAL("currentLayerChanged"), self.layers[ix])
 
 class ListParameterBox(QGridLayout):
     """ The getter parameter must be a function that returns a

@@ -130,9 +130,10 @@ class Module(processing.Module):
         else:
             role = Parameter.Role.input
         mandatory = not sagaParam.is_Optional()
+        
         try:
             qgisParamTyp = sagaToQGisParam[typ]            
-            qgisParam = qgisParamTyp(name, descr)
+            qgisParam = qgisParamTyp(name, descr, role=role)
             if qgisParamTyp == ChoiceParameter:
                 choiceParam = sagaParam.asChoice()
                 choices = [choiceParam.Get_Item(i) for i in
@@ -152,9 +153,9 @@ class Module(processing.Module):
         except KeyError: # Parameter types not in the above dict.
             typeName = saga.SG_Parameter_Type_Get_Name(typ)
             qgisParam = Parameter(name, str, descr,
-                "Unsupported parameter of type %s." % typeName)
+                "Unsupported parameter of type %s." % typeName,
+                role=role)
                 
-        qgisParam.setRole(role)
         qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)
         

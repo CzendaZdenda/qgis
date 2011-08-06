@@ -101,6 +101,7 @@ class Module(processing.Module):
         self._parameters = None
         # tag to be added to the programatically generated ones.
         self.sagaTag = set([processing.Tag('saga')])
+        self.layerRegistry = QgsMapLayerRegistry.instance()
         # only one instance per SAGA module
         self._instance = ModuleInstance(self)
         processing.Module.__init__(self,
@@ -167,17 +168,27 @@ class Module(processing.Module):
     def onParameterChanged(self, qgisParam, sagaParam, value):
         pc = qgisParam.__class__
         # special cases - layers, choices, files, etc.
+        # for layers we only set the saga param on excecution
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
+            layers = self.layerRegistry.mapLayers().values()
+            if pc == VectorLayerParameter:
+                layers = filter(
+                    lambda x: x.type() == QgsMapLayer.LayerType.VectorLayer,
+                    layers)
+            if pc == RasterLayerParameter:
+                layers = filter(
+                    lambda x: x.type() == QgsMapLayer.LayerType.RasterLayer,
+                    layers)
             if qgisParam.role() == Parameter.Role.output:
-                print "out!"
-                # output layer, value is ignored, allways a new layer
-                # created
-                pass
+                if value is not 0:
+                    qgisParam.layer = layers[value - 1]
+                else:
+                    qgisParam.layer = None
             else: # input layer
-                print "in!"
-                pass
+                qgisParam.layer = layers[value]
+            qgisParam.sagaParam = sagaParam
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             
@@ -210,11 +221,36 @@ class ModuleInstance(processing.ModuleInstance):
         if state != StateParameter.State.running:
             return
         modName = self.module().name()
+        
+        # set values of saga parameters...
+        for param in self.outLayer:
+            pc = param.__class__
+            if pc == VectorLayerParameter:
+                param.sagaLayer = saga.SG_Create_Shapes()
+                param.sagaParam.Set_Value(param.sagaLayer)
+            if pc == RasterLayerParameter:
+                param.sagaLayer = saga.SG_Create_Grid()
+                param.sagaParam.Set_Value(param.sagaLayer)
+        
+        # ...and in the case of input layers, 
+        # also export from qgis to saga
+        for param in self.inLayer:
+            pc = param.__class__
+            basename = "saga-qgis%s" % id(param.layer)                
+            if pc == VectorLayerParameter:
+                fn = saga.CSG_String("/tmp/%s.shp" % basename)
+                QgsVectorFileWriter.writeAsShapefile(param.layer,
+                    fn.c_str(), "CP1250")
+                param.sagaParam.Set_Value(saga.SG_Create_Shapes(fn))
+            if pc == RasterLayerParameter:
+                param.sagaParam.Set_Value(saga.SG_Create_Grid())
+        
         print "Module instance '%s' execution started." % modName
         if sm.Execute() != 0:
             print "Module execution suceeded."
             # umm- what if there is no iface?
             iface = self.module().iface
+            # now import output layers
             for param in self.outLayer:
                 basename = "saga-qgis%s" % id(param.layer)
                 pc = param.__class__
@@ -222,7 +258,7 @@ class ModuleInstance(processing.ModuleInstance):
                     # no implicit conversion!
                     fn = saga.CSG_String("/tmp/%s.shp" % basename)
                     # tell SAGA to save the layer
-                    param.layer.Save(fn)
+                    param.sagaLayer.Save(fn)
                     # load it into QGIS.
                     # TODO: where?
                     iface.addVectorLayer(fn.c_str(), basename, "ogr")
@@ -230,7 +266,7 @@ class ModuleInstance(processing.ModuleInstance):
                     # no implicit conversion!
                     fn = saga.CSG_String("/tmp/%s.grd" % basename)
                     # tell SAGA to save the layer
-                    param.layer.Save(fn)
+                    param.sagaLayer.Save(fn)
                     # load it into QGIS.
                     # TODO: where?
                     iface.addRasterLayer(fn.c_str(), basename)

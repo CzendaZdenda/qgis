@@ -28,29 +28,42 @@ import processing
 from processing.parameters import *
 import saga_api as saga
 
-def getLibraryPaths():
+def getLibraryPaths(userPath = None):
     try:
         paths = os.environ['MLB_PATH'].split(':')
     except KeyError:
         paths = ['/usr/lib/saga/', '/usr/local/lib/saga/']
         noMLBpath = True
+    if userPath:
+        paths = [userPath] + paths
     for p in paths:
         #print "Seaching SAGA modules in " + p + "."
         if os.path.exists(p):
             return [p + '/' + fn for fn in os.listdir(p)]
     if noMLBpath:
         print "Warning: MLB_PATH not set."
-    raise RuntimeError("No SAGA modules found in %s." % paths)
+    return []
 
 class SAGAPlugin:
     def __init__(self, iface):
+        window = iface.mainWindow()
         self.libraries = list()
         self._modules = None
-        for p in getLibraryPaths():
-            try:
-                self.libraries.append(Library(p, iface))
-            except InvalidLibrary:
-                pass
+        keepSearching = True
+        userPath = None
+        while keepSearching:
+            for p in getLibraryPaths(userPath):
+                try:
+                    print p
+                    self.libraries.append(Library(p, iface))
+                except InvalidLibrary:
+                    pass
+            if self.libraries:
+                keepSearching = False
+            else:
+                userPath, keepSearching = QInputDialog.getText(window,
+                    window.tr("SAGA modules not found."),
+                    window.tr("Please enter path to SAGA libraries:"));
     def initGui(self):
         pass
     def unload(self):
@@ -63,7 +76,7 @@ class InvalidLibrary(RuntimeError):
 class Library:
     def __init__(self, filename, iface = None):
         self.sagalib = saga.CSG_Module_Library(
-            saga.CSG_String(filename))
+            saga.CSG_String(str(filename)))
         if not self.sagalib.is_Valid():
             raise InvalidLibrary(filename)
         self._modules = None

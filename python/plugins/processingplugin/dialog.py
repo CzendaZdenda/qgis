@@ -121,8 +121,7 @@ class Dialog(QDialog, Ui_runDialog):
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
-            if param.role() == Parameter.Role.output:
-                layers.append(None)
+            layers.insert(0, None)
             w = LayerComboBox(layers)
             self._connectWidgetToParameter(w, param,
                 "currentLayerChanged",
@@ -164,7 +163,7 @@ class LayerComboBox(QComboBox):
         layerNames = list()
         for l in self.layers:
             if not l:
-                layerNames.append("[create]")
+                layerNames.append(self.tr("- none selected -"))
             else:
                 layerNames.append(l.name())
         self.clear()
@@ -175,7 +174,8 @@ class LayerComboBox(QComboBox):
         try:
             ix = self.layers.index(layer)
         except:
-            self.layer.append(layer)
+            self.layers.append(layer)
+            self.setLayers(self.layers)
             ix = self.layers.index(layer)
         self.setCurrentIndex(ix)
     def onCurrentIndexChanged(self, ix):

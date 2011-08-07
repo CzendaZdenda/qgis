@@ -47,6 +47,8 @@ class Framework:
         which returns a list of modules.
         """
         self._moduleProviders.add(moduleprovider)
+    def unregisterModuleProvider(self, moduleprovider):
+        self._moduleProviders.discard(moduleprovider)
     def modules(self):
         """ Returns complete list of registered modules."""
         moduleList = [set(mp.modules()) for mp in self._moduleProviders]

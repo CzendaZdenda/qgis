@@ -54,7 +54,6 @@ class SAGAPlugin:
         while keepSearching:
             for p in getLibraryPaths(userPath):
                 try:
-                    print p
                     self.libraries.append(Library(p, iface))
                 except InvalidLibrary:
                     pass
@@ -67,7 +66,8 @@ class SAGAPlugin:
     def initGui(self):
         pass
     def unload(self):
-        pass
+        for l in self.libraries:
+            processing.framework.unregisterModuleProvider(l)
 
 class InvalidLibrary(RuntimeError):
     def __init__(self, name):

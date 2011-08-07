@@ -149,7 +149,7 @@ class Module(processing.Module):
                 else:
                     self._instance.inLayer.append(qgisParam)
                 # force update of layer
-                self.onParameterChanged(qgisParam, sagaParam, 0)
+                self.onParameterChanged(qgisParam, sagaParam, None)
 
         except KeyError: # Parameter types not in the above dict.
             typeName = saga.SG_Parameter_Type_Get_Name(typ)
@@ -224,8 +224,9 @@ class ModuleInstance(processing.ModuleInstance):
             basename = "qgis-saga%s" % id(param.layer)                
             if pc == VectorLayerParameter:
                 fn = saga.CSG_String("/tmp/%s.shp" % basename)
-                QgsVectorFileWriter.writeAsShapefile(param.layer,
-                    fn.c_str(), "CP1250")
+                print param.layer
+                QgsVectorFileWriter.writeAsVectorFormat(param.layer,
+                    fn.c_str(), "CP1250", param.layer.crs())
                 param.sagaParam.Set_Value(saga.SG_Create_Shapes(fn))
             if pc == RasterLayerParameter:
                 fn = saga.CSG_String("/tmp/%s.grd" % basename)

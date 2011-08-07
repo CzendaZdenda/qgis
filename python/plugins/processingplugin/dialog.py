@@ -32,10 +32,10 @@ class Dialog(QDialog, Ui_runDialog):
         layerRegistry = QgsMapLayerRegistry.instance()
         self.mapLayers = layerRegistry.mapLayers().values()
         self.vectorLayers = filter(
-            lambda x: x.type() == QgsMapLayer.LayerType.VectorLayer,
+            lambda x: x.type() == QgsMapLayer.VectorLayer,
             self.mapLayers)
         self.rasterLayers = filter(
-            lambda x: x.type() == QgsMapLayer.LayerType.RasterLayer,
+            lambda x: x.type() == QgsMapLayer.RasterLayer,
             self.mapLayers)
         
         self.moduleinstance = module.instance()

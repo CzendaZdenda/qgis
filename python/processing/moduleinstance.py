@@ -56,10 +56,6 @@ class ModuleInstance(QtCore.QObject):
     def __getitem__(self, key):
         return self._parameters[key]
     def __setitem__(self, key, value):
-        # if there is no change, validator is not invoked & no signal
-        # emitted
-        if value == self.__getitem__(key):
-            return
         validator = key.validator()
         if validator is not None:
             state, _ = validator.validate(str(value), 0)

@@ -187,8 +187,9 @@ class Module(processing.Module):
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
-            qgisParam.layer = value
-            qgisParam.sagaParam = sagaParam
+                print value
+                qgisParam.layer = value
+                qgisParam.sagaParam = sagaParam
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             

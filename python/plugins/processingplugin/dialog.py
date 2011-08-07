@@ -144,9 +144,11 @@ class Dialog(QDialog, Ui_runDialog):
         self.statusBar.showMessage(fb)
     def onStateChange(self, state):
         if state == StateParameter.State.running:
-            self.execButton.setEnabled(False)
+            #self.execButton.setEnabled(False)
+            pass
         if state == StateParameter.State.stopped:
-            self.execButton.setEnabled(True)
+            pass
+            #self.execButton.setEnabled(True)
             #self.setVisible(False)
 
 class FileSelector(QHBoxLayout):

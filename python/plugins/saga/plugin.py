@@ -187,7 +187,6 @@ class Module(processing.Module):
         if (pc == LayerParameter or
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
-                print value
                 qgisParam.layer = value
                 qgisParam.sagaParam = sagaParam
         else: # generic case - numerics, booleans, etc.
@@ -237,6 +236,10 @@ class ModuleInstance(processing.ModuleInstance):
         # also export from qgis to saga
         for param in self.inLayer:
             pc = param.__class__
+            if not param.layer and param.isMandatory():
+                msg = "Mandatory parameter %s not set." % param.name()
+                self.setFeedback(msg, critical = True)
+                return
             basename = "qgis-saga%s" % id(param.layer)
             dpUri = str(param.layer.dataProvider().dataSourceUri())
             dpDescription = param.layer.dataProvider().description()              
@@ -254,13 +257,15 @@ class ModuleInstance(processing.ModuleInstance):
                 if isLocal:
                     fn = saga.CSG_String(dpUri)
                 else:
-                    print "Non-local raster sources not supported yet."
+                    msg = "Sorry. Only local raster layers supported."
+                    self.setFeedback(msg, critical = True)
+                    return
                     fn = saga.CSG_String("/tmp/%s.grd" % basename)
                 param.sagaParam.Set_Value(saga.SG_Create_Grid(fn))
         
-        print "Module instance '%s' execution started." % modName
+        self.setFeedback("Module '%s' execution started." % modName)
         if sm.Execute() != 0:
-            print "Module execution suceeded."
+            self.setFeedback("SAGA Module execution suceeded.")
             # umm- what if there is no iface?
             iface = self.module().iface
             # now import output layers
@@ -284,5 +289,5 @@ class ModuleInstance(processing.ModuleInstance):
                     # TODO: where?
                     iface.addRasterLayer(fn.c_str(), basename)
         else:
-            print "Module execution failed."
-        self.stateParameter.setValue(StateParameter.State.stopped)
+            self.setFeedback("Module execution failed.")
+        self.setState(StateParameter.State.stopped)

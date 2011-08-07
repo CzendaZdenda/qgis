@@ -21,7 +21,7 @@
 
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
-from parameters import StateParameter
+from parameters import StateParameter, FeedbackParameter
 
 class ModuleInstance(QtCore.QObject):
     """ Represents a single setup and execution of a module.
@@ -38,6 +38,7 @@ class ModuleInstance(QtCore.QObject):
         self.value = self.__getitem__
         self.setValue = self.__setitem__
         self.stateParameter = StateParameter()
+        self.feedbackParameter = FeedbackParameter()
     def module(self):
         return self._module
     def parameters(self):
@@ -46,9 +47,17 @@ class ModuleInstance(QtCore.QObject):
         if self._parameters is None:
             p = [(p, p.defaultValue()) for p in
                 self.module().parameters()]
-            p += [(self.stateParameter, StateParameter.State.stopped)]
+            p += [(self.stateParameter, StateParameter.State.stopped),
+                (self.feedbackParameter, None)]
             self._parameters = dict(p)
         return self._parameters
+    def feedback(self):
+        return self[self.feedbackParameter]
+    def setFeedback(self, fb, critical = False):
+        if fb != self.feedback():
+            self[self.feedbackParameter] = fb
+        if critical:
+            self.setState(StateParameter.State.stopped)
     def state(self):
         return self[self.stateParameter]
     def setState(self, state):

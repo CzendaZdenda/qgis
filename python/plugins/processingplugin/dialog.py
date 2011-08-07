@@ -42,16 +42,22 @@ class Dialog(QDialog, Ui_runDialog):
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
         self.text.setText(module.description())
-        execButton = QPushButton(self.tr("&Execute"));
-        execButton.setDefault(True)
-        self.buttons.addButton(execButton, QDialogButtonBox.ActionRole);
+        self.execButton = QPushButton(self.tr("&Execute"));
+        self.execButton.setDefault(True)
+        self.buttons.addButton(self.execButton, QDialogButtonBox.ActionRole);
         self.rebuildDialog()
         # Rebuild the dialog if parameter structure changes.
         QObject.connect(self.moduleinstance,
             self.moduleinstance.valueChangedSignal(),
             self.rebuildDialog)
+        QObject.connect(self.moduleinstance,
+            self.moduleinstance.valueChangedSignal(self.moduleinstance.feedbackParameter),
+            self.onFeedbackChange)
+        QObject.connect(self.moduleinstance,
+            self.moduleinstance.valueChangedSignal(self.moduleinstance.stateParameter),
+            self.onStateChange)
         # Start module instance on button click
-        QObject.connect(execButton, SIGNAL("clicked()"),
+        QObject.connect(self.execButton, SIGNAL("clicked()"),
             self._onExecButtonClicked)
     def rebuildDialog(self):
         for param, value in self.moduleinstance.parameters().items():
@@ -134,6 +140,14 @@ class Dialog(QDialog, Ui_runDialog):
             return w
     def _onExecButtonClicked(self):
         self.moduleinstance.setState(StateParameter.State.running)
+    def onFeedbackChange(self, fb):
+        self.statusBar.showMessage(fb)
+    def onStateChange(self, state):
+        if state == StateParameter.State.running:
+            self.execButton.setEnabled(False)
+        if state == StateParameter.State.stopped:
+            self.execButton.setEnabled(True)
+            #self.setVisible(False)
 
 class FileSelector(QHBoxLayout):
     def __init__(self, path = None, parent = None):

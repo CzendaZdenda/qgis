@@ -84,6 +84,11 @@ class StateParameter(Parameter):
         Parameter.__init__(self, "State", int, "",
             defaultValue, Parameter.Role.control)
 
+class FeedbackParameter(Parameter):
+    def __init__(self):
+        Parameter.__init__(self, "Feedback", str,
+            role = Parameter.Role.feedback)
+
 class NumericParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = 0.0, role = None):

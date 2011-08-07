@@ -237,16 +237,26 @@ class ModuleInstance(processing.ModuleInstance):
         # also export from qgis to saga
         for param in self.inLayer:
             pc = param.__class__
-            basename = "qgis-saga%s" % id(param.layer)                
+            basename = "qgis-saga%s" % id(param.layer)
+            dpUri = str(param.layer.dataProvider().dataSourceUri())
+            dpDescription = param.layer.dataProvider().description()              
             if pc == VectorLayerParameter:
-                fn = saga.CSG_String("/tmp/%s.shp" % basename)
-                print param.layer
-                QgsVectorFileWriter.writeAsVectorFormat(param.layer,
-                    fn.c_str(), "CP1250", param.layer.crs())
+                isLocal = dpDescription.startsWith('OGR data provider')
+                if isLocal:
+                    fn = saga.CSG_String(dpUri)
+                else:
+                    fn = saga.CSG_String("/tmp/%s.shp" % basename)
+                    QgsVectorFileWriter.writeAsVectorFormat(param.layer,
+                        fn.c_str(), "CP1250", param.layer.crs())
                 param.sagaParam.Set_Value(saga.SG_Create_Shapes(fn))
             if pc == RasterLayerParameter:
-                fn = saga.CSG_String("/tmp/%s.grd" % basename)
-                param.sagaParam.Set_Value(saga.SG_Create_Grid())
+                isLocal = dpDescription.startsWith('GDAL provider')
+                if isLocal:
+                    fn = saga.CSG_String(dpUri)
+                else:
+                    print "Non-local raster sources not supported yet."
+                    fn = saga.CSG_String("/tmp/%s.grd" % basename)
+                param.sagaParam.Set_Value(saga.SG_Create_Grid(fn))
         
         print "Module instance '%s' execution started." % modName
         if sm.Execute() != 0:

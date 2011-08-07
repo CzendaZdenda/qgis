@@ -99,8 +99,10 @@ class Module(processing.Module):
         elif self.interactive:
             self.module = lib.Get_Module_I(i)
         self._parameters = None
+        libTags = set([processing.Tag(s.lower()) for s in 
+            lib.Get_Menu().c_str().split("|")])
         # tag to be added to the programatically generated ones.
-        self.sagaTag = set([processing.Tag('saga')])
+        self.sagaTag = set([processing.Tag('saga')]) | libTags 
         self.layerRegistry = QgsMapLayerRegistry.instance()
         # only one instance per SAGA module
         self._instance = ModuleInstance(self)

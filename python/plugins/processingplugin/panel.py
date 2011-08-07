@@ -31,7 +31,8 @@ class Panel(QDockWidget, Ui_dock):
         self._iface = iface
         self._dialogs = list()
         self.setupUi(self)
-        tags = processing.framework.representativeTags()
+        tags = list(processing.framework.representativeTags())
+        tags.sort()
         self.buildModuleList(tags)
     	QObject.connect(self.moduleList,
 			SIGNAL("itemActivated(QTreeWidgetItem *, int)"),

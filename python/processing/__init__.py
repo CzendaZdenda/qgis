@@ -77,10 +77,10 @@ class Framework:
     def representativeTags(self):
         """ Returns list of tags that aren't too frequent or to infrequent
         to be representative.
-        That is, cut tags that only apply to 1% of the modules or to
-        more than 25%.
+        That is, cut tags that only apply to 2.5% of the modules or to
+        more than 15%.
         """
-        criterion = lambda (_, v): v > 0.02 and v < 0.25
+        criterion = lambda (_, v): v > 0.025 and v < 0.25
         tags = self.tagFrequency().items()
         if not tags: return tags
         tags, _ = zip(*filter(criterion, tags))

@@ -136,7 +136,8 @@ class Module(processing.Module):
             saga.PARAMETER_TYPE_FilePath: PathParameter,
             saga.PARAMETER_TYPE_Choice: ChoiceParameter,
             saga.PARAMETER_TYPE_Shapes: VectorLayerParameter,
-            saga.PARAMETER_TYPE_Grid:   RasterLayerParameter
+            saga.PARAMETER_TYPE_Grid:   RasterLayerParameter,
+            saga.PARAMETER_TYPE_Range:  RangeParameter
         }
         name = sagaParam.Get_Name()
         descr = sagaParam.Get_Description()
@@ -189,6 +190,9 @@ class Module(processing.Module):
             pc == RasterLayerParameter):
                 qgisParam.layer = value
                 qgisParam.sagaParam = sagaParam
+        elif pc == RangeParameter:
+            low, high = value
+            sagaParam.asRange().Set_Range(low, high)
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             

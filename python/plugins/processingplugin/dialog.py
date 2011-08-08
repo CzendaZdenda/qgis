@@ -89,11 +89,19 @@ class Dialog(QDialog, Ui_runDialog):
         pc = param.__class__
         if pc == StateParameter:
             return None
+        if pc == FeedbackParameter:
+            return None
         if pc == NumericParameter:
             w = QSpinBox(None)
             w.setValue(value)
             self._connectWidgetToParameter(w, param,
                 "valueChanged(int)", QSpinBox.setValue, QSpinBox.value)
+            return w
+        if pc == RangeParameter:
+            w = RangeBox(None)
+            w.setValue(value)
+            self._connectWidgetToParameter(w, param,
+                "valueChanged", RangeBox.setValue, RangeBox.value)
             return w
         if pc == BooleanParameter:
             w = QCheckBox(None)
@@ -196,6 +204,36 @@ class LayerComboBox(QComboBox):
         self.setCurrentIndex(ix)
     def onCurrentIndexChanged(self, ix):
         self.emit(SIGNAL("currentLayerChanged"), self.layers[ix])
+
+class RangeBox(QHBoxLayout):
+    def __init__(self, values = None, parent = None):
+        QHBoxLayout.__init__(self, parent)
+        if values:
+            self.setValue(values)
+        self.lowBox = QSpinBox(parent)
+        self.highBox = QSpinBox(parent)
+        self.addWidget(self.lowBox)
+        self.addWidget(self.highBox)
+        QObject.connect(self.lowBox,
+            SIGNAL("valueChanged(int)"), self.onLowValueChanged)
+        QObject.connect(self.highBox,
+            SIGNAL("valueChanged(int)"), self.onHighValueChanged)
+    def setValue(self, values):
+        low, high = sorted(values)
+        self.lowBox.setValue(low)
+        self.highBox.setValue(high)
+        self.lowBox.setMaximum(high)
+        self.highBox.setMinimum(low)
+    def value(self):
+        low = self.lowBox.value()
+        high = self.highBox.value()
+        return (low, high)
+    def onLowValueChanged(self, value):
+        self.highBox.setMinimum(value)
+        self.emit(SIGNAL("valueChanged"), self.value())
+    def onHighValueChanged(self, value):
+        self.lowBox.setMaximum(value)
+        self.emit(SIGNAL("valueChanged"), self.value())
 
 class ListParameterBox(QGridLayout):
     """ The getter parameter must be a function that returns a

@@ -95,6 +95,12 @@ class NumericParameter(Parameter):
         Parameter.__init__(self, name, float, description,
             defaultValue, role)
 
+class RangeParameter(Parameter):
+    def __init__(self, name, description = None,
+				 defaultValue = (0.0, 100.0), role = None):
+        Parameter.__init__(self, name, tuple, description,
+            defaultValue, role)
+
 class BooleanParameter(Parameter):
     def __init__(self, name, description = None,
 				 defaultValue = False, role = None):

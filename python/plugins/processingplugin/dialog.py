@@ -82,7 +82,7 @@ class Dialog(QDialog, Ui_runDialog):
             valueSet)
     def _widgetByType(self, param, value):
         try:
-            w = param.widget(param, value)
+            w = param.widget(value)
             return w
         except AttributeError:
             pass

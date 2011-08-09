@@ -26,6 +26,7 @@ from qgis.core import *
 import os
 import processing
 from processing.parameters import *
+from processingplugin.dialog import RangeBox
 import saga_api as saga
 
 def getLibraryPaths(userPath = None):
@@ -137,7 +138,8 @@ class Module(processing.Module):
             saga.PARAMETER_TYPE_Choice: ChoiceParameter,
             saga.PARAMETER_TYPE_Shapes: VectorLayerParameter,
             saga.PARAMETER_TYPE_Grid:   RasterLayerParameter,
-            saga.PARAMETER_TYPE_Range:  RangeParameter
+            saga.PARAMETER_TYPE_Range:  RangeParameter,
+            saga.PARAMETER_TYPE_Grid_System: GridSystemParameter
         }
         name = sagaParam.Get_Name()
         descr = sagaParam.Get_Description()
@@ -295,3 +297,29 @@ class ModuleInstance(processing.ModuleInstance):
         else:
             self.setFeedback("Module execution failed.")
         self.setState(StateParameter.State.stopped)
+
+class GridSystem:
+    def __init__(self, cellsize, xRange, yRange):
+        self.cellsize = cellsize
+        self.xRange = xRange
+        self.yRange = yRange
+
+class GridSystemParameter(Parameter):
+    def __init__(self, name, description = None,
+        defaultValue = GridSystem(1, (0, 100), (0, 100)), role = None):
+        Parameter.__init__(self, name, GridSystem, description,
+            defaultValue, role)
+    def widget(self, gSystem):
+        return GridSystemWidget(gSystem)
+        
+class GridSystemWidget(QGridLayout):
+    def __init__(self, gSystem, parent = None):
+        self.cellsizeWidget = QSpinBox(parent)
+        self.xRangeWidget = RangeBox(gSystem.xRange, parent)
+        self.yRangeWidget = RangeBox(gSystem.yRange, parent)
+        self.addWidget(QLabel(self.tr("Cellsize"), self), 0, 0)
+        self.addWidget(self.cellsizeWidget, 0, 1)
+        self.addWidget(QLabel(self.tr("X"), self), 1, 0)
+        self.addWidget(self.xRangeWidget, 1, 1)
+        self.addWidget(QLabel(self.tr("Y"), self), 2, 0)
+        self.addWidget(self.yRangeWidget, 2, 1)

@@ -316,6 +316,7 @@ class GridSystemWidget(QGridLayout):
     def __init__(self, gSystem, parent = None):
         QGridLayout.__init__(self, parent)
         self.cellsizeWidget = QSpinBox(parent)
+        self.cellsizeWidget.setValue(gSystem.cellsize)
         self.xRangeWidget = RangeBox(gSystem.xRange, parent)
         self.yRangeWidget = RangeBox(gSystem.yRange, parent)
         self.addWidget(QLabel(self.tr("Cellsize")), 0, 0, 1, 2)
@@ -324,3 +325,15 @@ class GridSystemWidget(QGridLayout):
         self.addItem(self.xRangeWidget, 1, 1, 1, 3)
         self.addWidget(QLabel(self.tr("Y Range")), 2, 0)
         self.addItem(self.yRangeWidget, 2, 1, 1, 3)
+        QObject.connect(self.addButton,
+            SIGNAL("clicked()"), self.onAddButtonClicked)
+        QObject.connect(self.removeButton,
+            SIGNAL("clicked()"), self.onRemoveButtonClicked)
+    def value(self):
+        return GridSystem(self.cellsizeWidget.value(),
+            self.xRangeWidget.value(),
+            self.yRangeWidget.value())
+    def setValue(self, v):
+        self.cellsizeWidget.setValue(v.cellsize)
+        self.xRangeWidget.setValue(v.xRange)
+        self.yRangeWidget.setValue(v.yRange)

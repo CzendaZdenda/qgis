@@ -314,12 +314,13 @@ class GridSystemParameter(Parameter):
         
 class GridSystemWidget(QGridLayout):
     def __init__(self, gSystem, parent = None):
+        QGridLayout.__init__(self, parent)
         self.cellsizeWidget = QSpinBox(parent)
         self.xRangeWidget = RangeBox(gSystem.xRange, parent)
         self.yRangeWidget = RangeBox(gSystem.yRange, parent)
-        self.addWidget(QLabel(self.tr("Cellsize"), self), 0, 0)
-        self.addWidget(self.cellsizeWidget, 0, 1)
-        self.addWidget(QLabel(self.tr("X"), self), 1, 0)
-        self.addWidget(self.xRangeWidget, 1, 1)
-        self.addWidget(QLabel(self.tr("Y"), self), 2, 0)
-        self.addWidget(self.yRangeWidget, 2, 1)
+        self.addWidget(QLabel(self.tr("Cellsize")), 0, 0, 1, 2)
+        self.addWidget(self.cellsizeWidget, 0, 3)
+        self.addWidget(QLabel(self.tr("X Range")), 1, 0)
+        self.addItem(self.xRangeWidget, 1, 1, 1, 3)
+        self.addWidget(QLabel(self.tr("Y Range")), 2, 0)
+        self.addItem(self.yRangeWidget, 2, 1, 1, 3)

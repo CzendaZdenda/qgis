@@ -67,6 +67,8 @@ class Parameter:
         self._value = value
     def validator(self):
         return None
+    def widget(self, value):
+        raise NotImplementedError
 
 class ParameterList(Parameter):
     """ List of parameters with fixed type.

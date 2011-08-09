@@ -84,7 +84,7 @@ class Dialog(QDialog, Ui_runDialog):
         try:
             w = param.widget(value)
             return w
-        except AttributeError:
+        except NotImplementedError:
             pass
         pc = param.__class__
         if pc == StateParameter:
@@ -208,12 +208,12 @@ class LayerComboBox(QComboBox):
 class RangeBox(QHBoxLayout):
     def __init__(self, values = None, parent = None):
         QHBoxLayout.__init__(self, parent)
-        if values:
-            self.setValue(values)
         self.lowBox = QSpinBox(parent)
         self.highBox = QSpinBox(parent)
         self.addWidget(self.lowBox)
         self.addWidget(self.highBox)
+        if values:
+            self.setValue(values)
         QObject.connect(self.lowBox,
             SIGNAL("valueChanged(int)"), self.onLowValueChanged)
         QObject.connect(self.highBox,

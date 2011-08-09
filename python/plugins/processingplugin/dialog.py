@@ -83,6 +83,8 @@ class Dialog(QDialog, Ui_runDialog):
     def _widgetByType(self, param, value):
         try:
             w = param.widget(value)
+            self._connectWidgetToParameter(w, param,
+                "valueChanged", type(w).setValue, type(w).value)
             return w
         except NotImplementedError:
             pass

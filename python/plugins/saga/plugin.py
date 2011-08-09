@@ -325,10 +325,12 @@ class GridSystemWidget(QGridLayout):
         self.addItem(self.xRangeWidget, 1, 1, 1, 3)
         self.addWidget(QLabel(self.tr("Y Range")), 2, 0)
         self.addItem(self.yRangeWidget, 2, 1, 1, 3)
-        QObject.connect(self.addButton,
-            SIGNAL("clicked()"), self.onAddButtonClicked)
-        QObject.connect(self.removeButton,
-            SIGNAL("clicked()"), self.onRemoveButtonClicked)
+        QObject.connect(self.cellsizeWidget,
+            SIGNAL("valueChanged(int)"), self.onValueChanged)
+        QObject.connect(self.xRangeWidget,
+            SIGNAL("valueChanged"), self.onValueChanged)
+        QObject.connect(self.yRangeWidget,
+            SIGNAL("valueChanged"), self.onValueChanged)
     def value(self):
         return GridSystem(self.cellsizeWidget.value(),
             self.xRangeWidget.value(),
@@ -337,3 +339,6 @@ class GridSystemWidget(QGridLayout):
         self.cellsizeWidget.setValue(v.cellsize)
         self.xRangeWidget.setValue(v.xRange)
         self.yRangeWidget.setValue(v.yRange)
+    def onValueChanged(self, _):
+        self.emit(SIGNAL("valueChanged"), self.value())
+        

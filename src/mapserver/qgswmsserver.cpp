@@ -110,9 +110,36 @@ QDomDocument QgsWMSServer::getCapabilities()
   QString requestUrl = getenv( "REQUEST_URI" );
   QUrl mapUrl( requestUrl );
   mapUrl.setHost( QString( getenv( "SERVER_NAME" ) ) );
-  mapUrl.removeQueryItem( "REQUEST" );
-  mapUrl.removeQueryItem( "VERSION" );
-  mapUrl.removeQueryItem( "SERVICE" );
+  if ( QString( getenv( "HTTPS" ) ).compare( "on", Qt::CaseInsensitive ) == 0 )
+  {
+    mapUrl.setScheme( "https" );
+  }
+  else
+  {
+    mapUrl.setScheme( "http" );
+  }
+
+  QList<QPair<QString, QString> > queryItems = mapUrl.queryItems();
+  QList<QPair<QString, QString> >::const_iterator queryIt = queryItems.constBegin();
+  for(; queryIt != queryItems.constEnd(); ++queryIt )
+  {
+    if( queryIt->first.compare("REQUEST", Qt::CaseInsensitive ) == 0 )
+    {
+      mapUrl.removeQueryItem( queryIt->first );
+    }
+    else if( queryIt->first.compare("VERSION", Qt::CaseInsensitive ) == 0 )
+    {
+      mapUrl.removeQueryItem( queryIt->first );
+    }
+    else if( queryIt->first.compare("SERVICE", Qt::CaseInsensitive ) == 0 )
+    {
+      mapUrl.removeQueryItem( queryIt->first );
+    }
+    else if( queryIt->first.compare("_DC", Qt::CaseInsensitive ) == 0 )
+    {
+      mapUrl.removeQueryItem( queryIt->first );
+    }
+  }
   hrefString = mapUrl.toString();
 
 
@@ -658,62 +685,66 @@ int QgsWMSServer::getFeatureInfo( QDomDocument& result )
   QStringList::const_iterator layerIt;
   for ( layerIt = queryLayerList.constBegin(); layerIt != queryLayerList.constEnd(); ++layerIt )
   {
-    //create maplayer from sld parser
+    //create maplayers from sld parser (several layers are possible in case of feature info on a group)
     layerList = mConfigParser->mapLayerFromStyle( *layerIt, "" );
-    currentLayer = layerList.at( 0 );
-    if ( !currentLayer || nonIdentifiableLayers.contains( currentLayer->id() ) )
+    QList<QgsMapLayer*>::iterator layerListIt = layerList.begin();
+    for(; layerListIt != layerList.end(); ++layerListIt )
     {
-      continue;
-    }
-    if ( infoPointToLayerCoordinates( i, j, infoPoint, mMapRenderer, currentLayer ) != 0 )
-    {
-      continue;
-    }
-    QgsDebugMsg( "Info point in layer crs: " + QString::number( infoPoint.x() ) + "//" + QString::number( infoPoint.y() ) );
-
-    QDomElement layerElement = result.createElement( "Layer" );
-    layerElement.setAttribute( "name", currentLayer->name() );
-    getFeatureInfoElement.appendChild( layerElement );
-
-    //switch depending on vector or raster
-    QgsVectorLayer* vectorLayer = dynamic_cast<QgsVectorLayer*>( currentLayer );
-    if ( vectorLayer )
-    {
-      //is there alias info for this vector layer?
-      QMap< int, QString > layerAliasInfo;
-      QMap< QString, QMap< int, QString > >::const_iterator aliasIt = aliasInfo.find( currentLayer->id() );
-      if ( aliasIt != aliasInfo.constEnd() )
-      {
-        layerAliasInfo = aliasIt.value();
-      }
-
-      //hidden attributes for this layer
-      QSet<QString> layerHiddenAttributes;
-      QMap< QString, QSet<QString> >::const_iterator hiddenIt = hiddenAttributes.find( currentLayer->id() );
-      if ( hiddenIt != hiddenAttributes.constEnd() )
-      {
-        layerHiddenAttributes = hiddenIt.value();
-      }
-
-      if ( featureInfoFromVectorLayer( vectorLayer, infoPoint, featureCount, result, layerElement, mMapRenderer, layerAliasInfo, layerHiddenAttributes ) != 0 )
-      {
-        return 9;
-      }
-    }
-    else //raster layer
-    {
-      QgsRasterLayer* rasterLayer = dynamic_cast<QgsRasterLayer*>( currentLayer );
-      if ( rasterLayer )
-      {
-        if ( featureInfoFromRasterLayer( rasterLayer, infoPoint, result, layerElement ) != 0 )
+        currentLayer = *layerListIt;
+        if ( !currentLayer || nonIdentifiableLayers.contains( currentLayer->id() ) )
         {
-          return 10;
+        continue;
         }
-      }
-      else
-      {
-        return 11;
-      }
+        if ( infoPointToLayerCoordinates( i, j, infoPoint, mMapRenderer, currentLayer ) != 0 )
+        {
+        continue;
+        }
+        QgsDebugMsg( "Info point in layer crs: " + QString::number( infoPoint.x() ) + "//" + QString::number( infoPoint.y() ) );
+
+        QDomElement layerElement = result.createElement( "Layer" );
+        layerElement.setAttribute( "name", currentLayer->name() );
+        getFeatureInfoElement.appendChild( layerElement );
+
+        //switch depending on vector or raster
+        QgsVectorLayer* vectorLayer = dynamic_cast<QgsVectorLayer*>( currentLayer );
+        if ( vectorLayer )
+        {
+            //is there alias info for this vector layer?
+            QMap< int, QString > layerAliasInfo;
+            QMap< QString, QMap< int, QString > >::const_iterator aliasIt = aliasInfo.find( currentLayer->id() );
+            if ( aliasIt != aliasInfo.constEnd() )
+            {
+                layerAliasInfo = aliasIt.value();
+            }
+
+            //hidden attributes for this layer
+            QSet<QString> layerHiddenAttributes;
+            QMap< QString, QSet<QString> >::const_iterator hiddenIt = hiddenAttributes.find( currentLayer->id() );
+            if ( hiddenIt != hiddenAttributes.constEnd() )
+            {
+                layerHiddenAttributes = hiddenIt.value();
+            }
+
+            if ( featureInfoFromVectorLayer( vectorLayer, infoPoint, featureCount, result, layerElement, mMapRenderer, layerAliasInfo, layerHiddenAttributes ) != 0 )
+            {
+                continue;
+            }
+        }
+        else //raster layer
+        {
+            QgsRasterLayer* rasterLayer = dynamic_cast<QgsRasterLayer*>( currentLayer );
+            if ( rasterLayer )
+            {
+                if ( featureInfoFromRasterLayer( rasterLayer, infoPoint, result, layerElement ) != 0 )
+                {
+                    continue;
+                }
+            }
+            else
+            {
+            continue;
+            }
+        }
     }
   }
   return 0;
@@ -1594,6 +1625,33 @@ QMap<QString, QString> QgsWMSServer::applyRequestedLayerFilters( const QStringLi
           filteredLayer->setSubsetString( newSubsetString );
         }
       }
+    }
+
+    //No BBOX parameter in request. We use the union of the filtered layer
+    //to provide the functionality of zooming to selected records via (enhanced) WMS.
+    if ( mMapRenderer && mMapRenderer->extent().isEmpty() )
+    {
+      QgsRectangle filterExtent;
+      QMap<QString, QString>::const_iterator filterIt = filterMap.constBegin();
+      for ( ; filterIt != filterMap.constEnd(); ++filterIt )
+      {
+        QgsMapLayer* mapLayer = QgsMapLayerRegistry::instance()->mapLayer( filterIt.key() );
+        if ( !mapLayer )
+        {
+          continue;
+        }
+
+        QgsRectangle layerExtent = mapLayer->extent();
+        if ( filterExtent.isEmpty() )
+        {
+          filterExtent = layerExtent;
+        }
+        else
+        {
+          filterExtent.combineExtentWith( &layerExtent );
+        }
+      }
+      mMapRenderer->setExtent( filterExtent );
     }
 
     //No BBOX parameter in request. We use the union of the filtered layer

@@ -655,6 +655,18 @@ QgsLegendGroup* QgsLegend::addEmbeddedGroup( const QString& groupName, const QSt
     return 0;
   }
 
+  //store identify disabled layers of the embedded project
+  QSet<QString> embeddedIdentifyDisabledLayers;
+  QDomElement disabledLayersElem = projectDocument.documentElement().firstChildElement( "properties" ).firstChildElement( "Identify" ).firstChildElement( "disabledLayers" );
+  if ( !disabledLayersElem.isNull() )
+  {
+    QDomNodeList valueList = disabledLayersElem.elementsByTagName( "value" );
+    for ( int i = 0; i < valueList.size(); ++i )
+    {
+      embeddedIdentifyDisabledLayers.insert( valueList.at( i ).toElement().text() );
+    }
+  }
+
   QDomElement legendElem = projectDocument.documentElement().firstChildElement( "legend" );
   if ( legendElem.isNull() )
   {
@@ -697,6 +709,7 @@ QgsLegendGroup* QgsLegend::addEmbeddedGroup( const QString& groupName, const QSt
       for ( int j = 0; j < groupChildren.size(); ++j )
       {
         QDomElement childElem = groupChildren.at( j ).toElement();
+        bool visible = ( childElem.attribute( "checked" ).compare( "Qt::Checked", Qt::CaseInsensitive ) == 0 );
         QString tagName = childElem.tagName();
         if ( tagName == "legendlayer" )
         {
@@ -713,9 +726,22 @@ QgsLegendGroup* QgsLegend::addEmbeddedGroup( const QString& groupName, const QSt
             removeItem( cItem );
           }
 
-          if( cItem )
+          if ( cItem )
           {
             group->insertChild( group->childCount(), cItem );
+          }
+
+          if ( !visible )
+          {
+            cItem->setCheckState( 0, Qt::Unchecked );
+          }
+
+          //consider the layer might be identify disabled in its project
+          if ( embeddedIdentifyDisabledLayers.contains( layerId ) )
+          {
+            QStringList thisProjectIdentifyDisabledLayers = QgsProject::instance()->readListEntry( "Identify", "/disabledLayers" );
+            thisProjectIdentifyDisabledLayers.append( layerId );
+            QgsProject::instance()->writeEntry( "Identify", "/disabledLayers", thisProjectIdentifyDisabledLayers );
           }
         }
         else if ( tagName == "legendgroup" )
@@ -1175,6 +1201,7 @@ bool QgsLegend::readXML( QgsLegendGroup *parent, const QDomNode &node )
       if ( childelem.attribute( "embedded" ) == "1" )
       {
         theGroup = addEmbeddedGroup( name, QgsProject::instance()->readPath( childelem.attribute( "project" ) ) );
+        updateGroupCheckStates( theGroup );
       }
       else
       {

@@ -76,9 +76,10 @@ IF (WITH_BINDINGS)
   SET (BINDINGS_GLOBAL_INSTALL FALSE CACHE BOOL "Install bindings to global python directory? (might need root)")
 ENDIF (WITH_BINDINGS)
 
-SET (WITH_GLOBE TRUE CACHE BOOL "Determines whether Globe plugin should be built")
+SET (WITH_GLOBE FALSE CACHE BOOL "Determines whether Globe plugin should be built")
 IF (WITH_GLOBE)
-  FIND_PACKAGE(OSGEARTH)
+  SET(QT_USE_QTOPENGL 1)
+  FIND_PACKAGE(OSGEARTH REQUIRED)
 ENDIF (WITH_GLOBE)
 
 # Compile flag. Make it possible to turn it off.
@@ -285,6 +286,7 @@ ELSE (WIN32)
     #   2  non-system libraries, "standard"
     #   3  non-system frameworks, "standalone"
     SET (QGIS_MACAPP_BUNDLE 1 CACHE STRING "What to bundle into app package")
+    SET (QGIS_MACAPP_BUNDLE_USER "" CACHE STRING "Path to user bundling script")
     SET (QGIS_MACAPP_INSTALL_DEV FALSE CACHE BOOL "Install developer frameworks")
     SET (QGIS_MACAPP_DEV_PREFIX "/Library/Frameworks" CACHE STRING "Path to install developer frameworks")
     # if we have @loader_path, >=OSX 10.5 (darwin 9+)
@@ -376,6 +378,16 @@ SET (QGIS_DATA_DIR    ${QGIS_DATA_SUBDIR})
 SET (QGIS_PLUGIN_DIR  ${QGIS_PLUGIN_SUBDIR})
 SET (QGIS_INCLUDE_DIR ${QGIS_INCLUDE_SUBDIR})
 
+# set the default locations where the targets (executables, libraries) will land when compiled
+# this is to allow running qgis from the source tree without having to actually do a "make install"
+SET (QGIS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/output)
+SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR})
+SET (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_LIB_SUBDIR})
+
+# write a marker with source directory path into the output's bin directory
+# if run from the build directory QGIS will detect it and alter the paths
+FILE(WRITE ${QGIS_OUTPUT_DIRECTORY}/${QGIS_BIN_SUBDIR}/source_path.txt "${CMAKE_SOURCE_DIR}")
+
 # manual page - makes sense only on unix systems
 IF (UNIX AND NOT APPLE)
   SET (DEFAULT_MANUAL_SUBDIR  man)
@@ -437,7 +449,10 @@ IF (GIT_MARKER)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
       )
     ELSE(MSVC)
-      EXECUTE_PROCESS(COMMAND ${GIT} log -n1 --pretty=%h OUTPUT_VARIABLE REVISION)
+      EXECUTE_PROCESS(
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${GIT} log -n1 --pretty=%h OUTPUT_VARIABLE REVISION
+      )
       STRING(STRIP "${REVISION}" REVISION)
       ADD_CUSTOM_COMMAND(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/qgsversion.h

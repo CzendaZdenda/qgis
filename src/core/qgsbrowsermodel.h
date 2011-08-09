@@ -7,7 +7,7 @@
 
 #include "qgsdataitem.h"
 
-class QgsBrowserModel : public QAbstractItemModel
+class CORE_EXPORT QgsBrowserModel : public QAbstractItemModel
 {
     Q_OBJECT
 
@@ -50,17 +50,23 @@ class QgsBrowserModel : public QAbstractItemModel
 
     virtual QStringList mimeTypes() const;
 
-    QMimeData * mimeData(const QModelIndexList &indexes) const;
+    QMimeData * mimeData( const QModelIndexList &indexes ) const;
 
     QgsDataItem *dataItem( const QModelIndex &idx ) const;
 
     bool hasChildren( const QModelIndex &parent = QModelIndex() ) const;
 
+    // Reload the whole model
+    void reload();
+
     // Refresh item specified by path
-    void refresh( QString path, const QModelIndex &index = QModelIndex() );
+    void refresh( QString path );
 
     // Refresh item childs
     void refresh( const QModelIndex &index = QModelIndex() );
+
+    //! return index of a path
+    QModelIndex findPath( QString path );
 
     void connectItem( QgsDataItem *item );
 
@@ -77,8 +83,12 @@ class QgsBrowserModel : public QAbstractItemModel
     void endRemoveItems();
 
   protected:
+
+    // populates the model
+    void addRootItems();
+    void removeRootItems();
+
     QVector<QgsDataItem*> mRootItems;
-    QIcon mIconDirectory;
 };
 
 #endif // QGSBROWSERMODEL_H

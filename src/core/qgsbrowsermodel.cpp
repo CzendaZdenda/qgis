@@ -10,14 +10,38 @@
 
 #include "qgsbrowsermodel.h"
 
+#include <QSettings>
 
 QgsBrowserModel::QgsBrowserModel( QObject *parent ) :
     QAbstractItemModel( parent )
 {
+  addRootItems();
+}
+
+QgsBrowserModel::~QgsBrowserModel()
+{
+  removeRootItems();
+}
+
+void QgsBrowserModel::addRootItems()
+{
+  // give the home directory a prominent first place
+  QgsDirectoryItem *item = new QgsDirectoryItem( NULL, tr( "Home" ), QDir::homePath() );
   QStyle *style = QApplication::style();
-  mIconDirectory = QIcon( style->standardPixmap( QStyle::SP_DirClosedIcon ) );
-  mIconDirectory.addPixmap( style->standardPixmap( QStyle::SP_DirOpenIcon ),
-                            QIcon::Normal, QIcon::On );
+  QIcon homeIcon( style->standardPixmap( QStyle::SP_DirHomeIcon ) );
+  item->setIcon( homeIcon );
+  connectItem( item );
+  mRootItems << item;
+
+  // add favourite directories
+  QSettings settings;
+  QStringList favDirs = settings.value( "/browser/favourites", QVariant() ).toStringList();
+  foreach( QString favDir, favDirs )
+  {
+    QgsDirectoryItem *item = new QgsDirectoryItem( NULL, favDir, favDir );
+    connectItem( item );
+    mRootItems << item;
+  }
 
   foreach( QFileInfo drive, QDir::drives() )
   {
@@ -66,12 +90,14 @@ QgsBrowserModel::QgsBrowserModel( QObject *parent ) :
   }
 }
 
-QgsBrowserModel::~QgsBrowserModel()
+void QgsBrowserModel::removeRootItems()
 {
   foreach( QgsDataItem* item, mRootItems )
   {
     delete item;
   }
+
+  mRootItems.clear();
 }
 
 
@@ -162,29 +188,57 @@ int QgsBrowserModel::columnCount( const QModelIndex &parent ) const
   return 1;
 }
 
-/* Refresh dir path */
-void QgsBrowserModel::refresh( QString path, const QModelIndex &theIndex )
+QModelIndex QgsBrowserModel::findPath( QString path )
 {
-  QStringList paths = path.split( '/' );
-  for ( int i = 0; i < rowCount( theIndex ); i++ )
+  QModelIndex theIndex; // starting from root
+  bool foundChild = true;
+
+  while ( foundChild )
   {
-    QModelIndex idx = index( i, 0, theIndex );
-    QgsDataItem *item = dataItem( idx );
-    if ( !item )
-      break;
+    foundChild = false; // assume that the next child item will not be found
 
-    if ( item->path() == path )
+    for ( int i = 0; i < rowCount( theIndex ); i++ )
     {
-      QgsDebugMsg( "Arrived " + item->path() );
+      QModelIndex idx = index( i, 0, theIndex );
+      QgsDataItem *item = dataItem( idx );
+      if ( !item )
+        return QModelIndex(); // an error occurred
+
+      if ( item->path() == path )
+      {
+        QgsDebugMsg( "Arrived " + item->path() );
+        return idx; // we have found the item we have been looking for
+      }
+
+      if ( path.startsWith( item->path() ) )
+      {
+        // we have found a preceding item: stop searching on this level and go deeper
+        foundChild = true;
+        theIndex = idx;
+        break;
+      }
+    }
+  }
+
+  return QModelIndex(); // not found
+}
+
+void QgsBrowserModel::reload()
+{
+  removeRootItems();
+  addRootItems();
+  reset(); // Qt4.6 brings better methods beginResetModel + endResetModel
+}
+
+/* Refresh dir path */
+void QgsBrowserModel::refresh( QString path )
+{
+  QModelIndex idx = findPath( path );
+  if ( idx.isValid() )
+  {
+    QgsDataItem* item = dataItem( idx );
+    if ( item )
       item->refresh();
-      return;
-    }
-
-    if ( path.indexOf( item->path() ) == 0 )
-    {
-      refresh( path, idx );
-      break;
-    }
   }
 }
 

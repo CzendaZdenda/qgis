@@ -29,13 +29,14 @@ class Parameter:
         basic, advanced = 1, 2
     def __init__(self, name, pType, description = None,
                  defaultValue = None, role = None,
-                 mandatory = True):
+                 mandatory = True, validator = None):
         self._name = name
         self._description = description
         self._type = pType
         self._defaultValue = defaultValue
         self._role = role
         self._mandatory = mandatory
+        self._validator = validator
     def name(self):
         return self._name
     def description(self):
@@ -66,7 +67,9 @@ class Parameter:
     def setValue(self, value):
         self._value = value
     def validator(self):
-        return None
+        return self._validator
+    def setValidator(self, validator):
+        self._validator = validator
     def widget(self, value):
         raise NotImplementedError
 

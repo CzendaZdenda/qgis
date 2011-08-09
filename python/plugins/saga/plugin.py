@@ -151,30 +151,44 @@ class Module(processing.Module):
         mandatory = not sagaParam.is_Optional()
         
         try:
-            qgisParamTyp = sagaToQGisParam[typ]            
-            qgisParam = qgisParamTyp(name, descr, role=role)
-            if qgisParamTyp == ChoiceParameter:
+            pc = sagaToQGisParam[typ]            
+            qgisParam = pc(name, descr, role=role)
+            if pc == ChoiceParameter:
                 choiceParam = sagaParam.asChoice()
                 choices = [choiceParam.Get_Item(i) for i in
                     range(choiceParam.Get_Count())]
                 qgisParam.setChoices(choices)
                 qgisParam.setValue(0)
                 
-            elif (qgisParamTyp == VectorLayerParameter or
-                qgisParamTyp == RasterLayerParameter):
+            elif (pc == VectorLayerParameter or
+                pc == RasterLayerParameter):
                 if role == Parameter.Role.output:
                     self._instance.outLayer.append(qgisParam)
                 else:
                     self._instance.inLayer.append(qgisParam)
                 # force update of layer
                 self.onParameterChanged(qgisParam, sagaParam, None)
-
+            
+            elif pc == NumericParameter:
+                vp = sagaParam.asValue()
+                if vp.has_Minimum():
+                    bottom = vp.Get_Minimum()
+                else:
+                    bottom = 0
+                if vp.has_Maximum():
+                    top = vp.Get_Maximum()
+                else:
+                    top = 1000
+                val = QDoubleValidator(None)
+                val.setRange(bottom, top)
+                qgisParam.setValidator(val)
+                
         except KeyError: # Parameter types not in the above dict.
             typeName = saga.SG_Parameter_Type_Get_Name(typ)
             qgisParam = Parameter(name, str, descr,
                 "Unsupported parameter of type %s." % typeName,
                 role=role)
-                
+        
         qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)
         
@@ -195,6 +209,12 @@ class Module(processing.Module):
         elif pc == RangeParameter:
             low, high = value
             sagaParam.asRange().Set_Range(low, high)
+        elif pc == GridSystemParameter:
+            cellsize = value.cellsize
+            xMin, xMax = value.xRange
+            yMin, yMax = value.yRange
+            self.module.Get_System().Assign(cellsize, xMin, yMin,
+                xMax, yMax)
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             
@@ -288,7 +308,7 @@ class ModuleInstance(processing.ModuleInstance):
                     iface.addVectorLayer(fn.c_str(), basename, "ogr")
                 elif pc == RasterLayerParameter:
                     # no implicit conversion!
-                    fn = saga.CSG_String("/tmp/%s.grd" % basename)
+                    fn = saga.CSG_String("/tmp/%s.sgrd" % basename)
                     # tell SAGA to save the layer
                     param.sagaLayer.Save(fn)
                     # load it into QGIS.
@@ -315,7 +335,7 @@ class GridSystemParameter(Parameter):
 class GridSystemWidget(QGridLayout):
     def __init__(self, gSystem, parent = None):
         QGridLayout.__init__(self, parent)
-        self.cellsizeWidget = QSpinBox(parent)
+        self.cellsizeWidget = QDoubleSpinBox(parent)
         self.cellsizeWidget.setValue(gSystem.cellsize)
         self.xRangeWidget = RangeBox(gSystem.xRange, parent)
         self.yRangeWidget = RangeBox(gSystem.yRange, parent)

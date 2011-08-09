@@ -94,10 +94,14 @@ class Dialog(QDialog, Ui_runDialog):
         if pc == FeedbackParameter:
             return None
         if pc == NumericParameter:
-            w = QSpinBox(None)
+            w = QDoubleSpinBox(None)
+            val = param.validator()
+            if val:
+                w.setRange(val.bottom(), val.top())
             w.setValue(value)
             self._connectWidgetToParameter(w, param,
-                "valueChanged(int)", QSpinBox.setValue, QSpinBox.value)
+                "valueChanged(int)",
+                QDoubleSpinBox.setValue, QDoubleSpinBox.value)
             return w
         if pc == RangeParameter:
             w = RangeBox(None)
@@ -210,8 +214,8 @@ class LayerComboBox(QComboBox):
 class RangeBox(QHBoxLayout):
     def __init__(self, values = None, parent = None):
         QHBoxLayout.__init__(self, parent)
-        self.lowBox = QSpinBox(parent)
-        self.highBox = QSpinBox(parent)
+        self.lowBox = QDoubleSpinBox(parent)
+        self.highBox = QDoubleSpinBox(parent)
         self.addWidget(self.lowBox)
         self.addWidget(self.highBox)
         if values:

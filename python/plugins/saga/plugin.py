@@ -47,7 +47,9 @@ def getLibraryPaths(userPath = None):
 
 class SAGAPlugin:
     def __init__(self, iface):
-        window = iface.mainWindow()
+        self.iface = iface
+        self.window = iface.mainWindow()
+    def initGui(self):
         self.libraries = list()
         self._modules = None
         keepSearching = True
@@ -55,17 +57,16 @@ class SAGAPlugin:
         while keepSearching:
             for p in getLibraryPaths(userPath):
                 try:
-                    self.libraries.append(Library(p, iface))
+                    self.libraries.append(Library(p, self.iface))
                 except InvalidLibrary:
                     pass
             if self.libraries:
                 keepSearching = False
             else:
-                userPath, keepSearching = QInputDialog.getText(window,
-                    window.tr("SAGA modules not found."),
-                    window.tr("Please enter path to SAGA libraries:"));
-    def initGui(self):
-        pass
+                userPath, keepSearching = QInputDialog.getText(
+                    self.window,
+                    self.window.tr("SAGA modules not found."),
+                    self.window.tr("Please enter path to SAGA libraries:"));
     def unload(self):
         for l in self.libraries:
             processing.framework.unregisterModuleProvider(l)

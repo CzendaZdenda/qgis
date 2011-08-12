@@ -216,6 +216,10 @@ class Module(processing.Module):
             yMin, yMax = value.yRange
             self.module.Get_System().Assign(cellsize, xMin, yMin,
                 xMax, yMax)
+        elif pc == StringParameter:
+            # convert QString to CSG_String
+            string = saga.CSG_String(str(value))
+            sagaParam.Get_Data().Set_Value(string)
         else: # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             

@@ -41,6 +41,8 @@ class Tag(str):
 class Framework:
     def __init__(self):
         self._moduleProviders = set()
+    def moduleProviders(self):
+        return self._moduleProviders
     def registerModuleProvider(self, moduleprovider):
         """ Register module providers with the framework.
         moduleprovider must implement the modules() method,

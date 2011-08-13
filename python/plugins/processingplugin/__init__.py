@@ -43,6 +43,7 @@ class ProcessingPlugin:
     def __init__(self, iface):
         self._iface = iface
         self.panel = None
+        self.settings = None
     def initGui(self):
         from PyQt4.QtCore import QObject, SIGNAL
         from PyQt4.QtGui import QAction, QMenu
@@ -55,10 +56,20 @@ class ProcessingPlugin:
         QObject.connect(self.panelAction,
             SIGNAL("triggered(bool)"), self.showPanel)
         menuBar = self._iface.mainWindow().menuBar()
+        self.settingsAction = QAction(self.menu.tr("&Settings", "Processing"),
+            self._iface.mainWindow())
+        self.menu.addAction(self.settingsAction)
+        QObject.connect(self.settingsAction,
+            SIGNAL("triggered()"), self.showSettings)
         menuBar.insertMenu(menuBar.actions()[-1], self.menu)
     def unload(self):
         if self.panel is not None:
             self.panel.setVisible(False)
+    def showSettings(self):
+        from settings import Settings
+        if not self.settings:
+            self.settings = Settings(self._iface.mainWindow())
+        self.settings.setVisible(True)
     def showPanel(self, visible = True):
         from panel import Panel
         from PyQt4.QtCore import QObject, SIGNAL

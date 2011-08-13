@@ -140,7 +140,10 @@ class Module(processing.Module):
             saga.PARAMETER_TYPE_Shapes: VectorLayerParameter,
             saga.PARAMETER_TYPE_Grid:   RasterLayerParameter,
             saga.PARAMETER_TYPE_Range:  RangeParameter,
-            saga.PARAMETER_TYPE_Grid_System: GridSystemParameter
+            #saga.PARAMETER_TYPE_Grid_System: GridSystemParameter
+            # Taking grid system from output grid, for now.
+            # TODO: allow resampling?
+            saga.PARAMETER_TYPE_Grid_System: None
         }
         name = sagaParam.Get_Name()
         descr = sagaParam.Get_Description()
@@ -152,7 +155,9 @@ class Module(processing.Module):
         mandatory = not sagaParam.is_Optional()
         
         try:
-            pc = sagaToQGisParam[typ]            
+            pc = sagaToQGisParam[typ]
+            if not pc: # We are ignoring certain types of parameters
+                return            
             qgisParam = pc(name, descr, role=role)
             if pc == ChoiceParameter:
                 choiceParam = sagaParam.asChoice()
@@ -292,7 +297,25 @@ class ModuleInstance(processing.ModuleInstance):
                     self.setFeedback(msg, critical = True)
                     return
                     fn = saga.CSG_String("/tmp/%s.grd" % basename)
-                param.sagaParam.Set_Value(saga.SG_Create_Grid(fn))
+                sagaParentTyp = param.sagaParam.Get_Parent().Get_Type()
+                if sagaParentTyp == saga.PARAMETER_TYPE_Grid_System:
+                    grid = saga.SG_Create_Grid(fn)
+                else:
+                    msg = "No grid system specified."
+                    self.setFeedback(msg, critical = True)
+                    return
+                gridSys = param.sagaParam.Get_Parent().asGrid_System()
+                # Use output raster's grid system if no valid
+                # system is set in the module
+                if not gridSys.is_Valid():
+                    gridSys.Assign(grid.Get_System())
+                # If a valid system is set, it must be equal to the
+                # ouput raster's system. Else complain & return.
+                elif not gridSys.is_Equal(grid.Get_System()):
+                    msg = "Incompatible grid systems."
+                    self.setFeedback(msg, critical = True)
+                    return
+                param.sagaParam.Set_Value(grid)
         
         self.setFeedback("Module '%s' execution started." % modName)
         if sm.Execute() != 0:

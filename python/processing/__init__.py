@@ -39,9 +39,19 @@ class Tag(str):
         return self.strip().upper() == other.strip().upper()
 
 class Framework:
+    """ The Framework is instantiated in a singleton:
+    processing.framework.
+    This is the centerpiece of the QGIS Processing Framework, which
+    keeps track of all available modules through moduleproviders.
+    (See registerModuleProvider method)
+    It sorts these modules by tag and provides the model data for the
+    Processing Panel Plugin, which handles the GUI side of things.
+    """
     def __init__(self):
         self._moduleProviders = set()
     def moduleProviders(self):
+        """ Module providers are returned in a python set.
+        """
         return self._moduleProviders
     def registerModuleProvider(self, moduleprovider):
         """ Register module providers with the framework.
@@ -50,19 +60,27 @@ class Framework:
         """
         self._moduleProviders.add(moduleprovider)
     def unregisterModuleProvider(self, moduleprovider):
+        """ Call this method to unregister a moduleprovider from your
+        backend's deinitialization code, e.g. unload() method.
+        It will return silently if the moduleprovider is not registered.
+        """
         self._moduleProviders.discard(moduleprovider)
     def modules(self):
-        """ Returns complete list of registered modules."""
+        """ Returns complete set of registered modules by all module
+        providers.
+        """
         moduleList = [set(mp.modules()) for mp in self._moduleProviders]
         return set(chain(*moduleList))
     def modulesByTag(self, tag):
-        """ Returns modules that match the tag specified."""
+        """ Returns all modules that match the tag specified.
+        """
         tag = Tag(tag)
         return filter(lambda m: tag in m.tags(), self.modules())
     def tagFrequency(self):
         """ Return a dict of tag => relative tag frequency.
         Relative tag ranges from 0.0 to 1.0, the latter identifing tags
         that every module has.
+        This is a measure of how relevant a tag is.
         """
         tags = dict()
         # perhaps standard tags could be given a bump?
@@ -76,13 +94,17 @@ class Framework:
         tags = map(lambda (k, v): (k, v / len(modules)), tags.items())
         return dict(tags)
     def usedTags(self):
-        """ Tags used."""
+        """ Return a set of all tags used by at least 1 module.
+        May contain standard tags and/or implementation-specific tags.
+        """
         return set(self.tagFrequency().keys())
     def representativeTags(self):
         """ Returns list of tags that aren't too frequent or to infrequent
         to be representative.
         That is, cut tags that only apply to 2.5% of the modules or to
         more than 15%.
+        In future, this criterion will be user-modifiable from the
+        settings dialog.
         """
         criterion = lambda (_, v): v > 0.025 and v < 0.25
         tags = self.tagFrequency().items()
@@ -90,26 +112,58 @@ class Framework:
         tags, _ = zip(*filter(criterion, tags))
         return tags
         
-    """ Default set of tags. Not binding. """
+    """ Default set of tags. Not binding. It is recommended that
+    backends provide their own tags in addition to these, including
+    at least one describing the backend library, e.g. "saga".
+    """
     standardTags = set([Tag(s) for s in ["2D", "3D", "analysis",
         "classification", "database", "display", "export", "filter",
         "imagery", "import", "interactive", "paint", "photo",
         "postscript", "projection", "raster", "simulation",
         "statistics", "vector"]])
 
-""" Singleton framework """
+""" Singleton framework.
+See Framework class description.
+"""
 framework = Framework()
 
 class Module:
-    """ A processing module. """
+    """ A processing module.
+    As a backend developer you will most likely want to subclass this.
+    As a user or script developer, get a module from the framework
+    singleton, then one or more ModuleInstances.
+    See ModuleInstace class for more information.
+    
+    Attributes:
+    name -- this is the handle to the Module, and the name displayed
+        in the GUI.
+    description -- this is a longer description of the module's
+        functionality, may be multi-line and HTML-formatted.
+    tags -- this is a set of case-insensitive classificators of the
+        module.
+    parameters -- this is a set of input & ouput parameters of different
+        types. Control and feedback is also handled through this
+        mechanism. See parameters module for more information.
+    """
     def __init__(self, name,
         description = "", tags = None):
+            """ Module initialization.
+            Most attributes of the object can be set at initialization.
+            As a backend developer you may want to override the getters
+            name(), description(), tags(), instead, if more complicated
+            code is necessary.
+            See the class' description for an explanation of the
+            arguments.
+            """
             self._name = name
             self._description = description
             self._tags = tags
     def instance(self):
         """ Return a new module instance.
         Call this instead of the ModuleInstance constructor.
+        Backend implementations may want to override only this method
+        as an alternative to the whole class if your interface is simple
+        enough.
         """
         return ModuleInstance(self)
     def name(self):

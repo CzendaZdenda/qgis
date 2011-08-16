@@ -23,6 +23,8 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
 
+from osgeo import gdal
+
 import os
 import processing
 from processing.parameters import *
@@ -283,14 +285,25 @@ class ModuleInstance(processing.ModuleInstance):
             if pc == RasterLayerParameter:
                 isLocal = dpDescription.startsWith('GDAL provider')
                 if isLocal:
-                    fn = saga.CSG_String(dpUri)
+                    sagaFn = saga.CSG_String("/tmp/%s.sgrd" % basename)
+                    # GDAL & QGIS use the sdat file as reference,
+                    # unlike SAGA
+                    qgisFn = "/tmp/%s.sdat" % basename
                 else:
                     msg = "Sorry. Only local raster layers supported."
                     self.setFeedback(msg, critical = True)
                     return
-                    fn = saga.CSG_String("/tmp/%s.grd" % basename)
+                self.setFeedback("Converting raster to SAGA grid...")
+                # convert input to saga grid file -- adapted from
+                # GDAL tutorial
+                driver = gdal.GetDriverByName("SAGA")
+                source = gdal.Open(dpUri)
+                destination = driver.CreateCopy(qgisFn, source, 0 )
+                # Once we're done, close properly the dataset
+                source = None
+                destination = None
                 grid = saga.SG_Create_Grid()
-                if grid.Create(fn) == 0:
+                if grid.Create(sagaFn) == 0:
                     self.setFeedback("Couldn't create SAGA input grid.",
                         critical = True)
                     return
@@ -332,12 +345,13 @@ class ModuleInstance(processing.ModuleInstance):
                     iface.addVectorLayer(fn.c_str(), basename, "ogr")
                 elif pc == RasterLayerParameter:
                     # no implicit conversion!
-                    fn = saga.CSG_String("/tmp/%s.sgrd" % basename)
+                    sagaFn = saga.CSG_String("/tmp/%s.sgrd" % basename)
+                    qgisFn = "/tmp/%s.sdat" % basename
                     # tell SAGA to save the layer
-                    param.sagaLayer.Save(fn)
+                    param.sagaLayer.Save(sagaFn)
                     # load it into QGIS.
                     # TODO: where?
-                    iface.addRasterLayer(fn.c_str(), basename)
+                    iface.addRasterLayer(qgisFn, basename)
         else:
             self.setFeedback("Module execution failed.")
         self.setState(StateParameter.State.stopped)

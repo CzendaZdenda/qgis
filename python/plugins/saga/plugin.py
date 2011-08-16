@@ -164,7 +164,7 @@ class Module(processing.Module):
                 choices = [choiceParam.Get_Item(i) for i in
                     range(choiceParam.Get_Count())]
                 qgisParam.setChoices(choices)
-                qgisParam.setValue(0)
+                qgisParam.setDefaultValue(0)
                 
             elif (pc == VectorLayerParameter or
                 pc == RasterLayerParameter):
@@ -258,16 +258,8 @@ class ModuleInstance(processing.ModuleInstance):
             return
         modName = self.module().name()
         
+        inputGrid = None
         # set values of saga parameters...
-        for param in self.outLayer:
-            pc = param.__class__
-            if pc == VectorLayerParameter:
-                param.sagaLayer = saga.SG_Create_Shapes()
-                param.sagaParam.Set_Value(param.sagaLayer)
-            if pc == RasterLayerParameter:
-                param.sagaLayer = saga.SG_Create_Grid()
-                param.sagaParam.Set_Value(param.sagaLayer)
-        
         # ...and in the case of input layers, 
         # also export from qgis to saga
         for param in self.inLayer:
@@ -297,25 +289,29 @@ class ModuleInstance(processing.ModuleInstance):
                     self.setFeedback(msg, critical = True)
                     return
                     fn = saga.CSG_String("/tmp/%s.grd" % basename)
-                sagaParentTyp = param.sagaParam.Get_Parent().Get_Type()
-                if sagaParentTyp == saga.PARAMETER_TYPE_Grid_System:
-                    grid = saga.SG_Create_Grid(fn)
-                else:
-                    msg = "No grid system specified."
-                    self.setFeedback(msg, critical = True)
+                grid = saga.SG_Create_Grid()
+                if grid.Create(fn) == 0:
+                    self.setFeedback("Couldn't create SAGA input grid.",
+                        critical = True)
                     return
-                gridSys = param.sagaParam.Get_Parent().asGrid_System()
-                # Use output raster's grid system if no valid
-                # system is set in the module
-                if not gridSys.is_Valid():
-                    gridSys.Assign(grid.Get_System())
-                # If a valid system is set, it must be equal to the
-                # ouput raster's system. Else complain & return.
-                elif not gridSys.is_Equal(grid.Get_System()):
-                    msg = "Incompatible grid systems."
-                    self.setFeedback(msg, critical = True)
-                    return
+                # Store first input grid for output.
+                if not inputGrid:
+                    inputGrid = grid
                 param.sagaParam.Set_Value(grid)
+        
+        for param in self.outLayer:
+            pc = param.__class__
+            if pc == VectorLayerParameter:
+                param.sagaLayer = saga.SG_Create_Shapes()
+                param.sagaParam.Set_Value(param.sagaLayer)
+            if pc == RasterLayerParameter:
+                # use an input grid to get the grid system
+                if not inputGrid:
+                    self.setFeedback("No input grid specified.", True)
+                    return
+                param.sagaLayer = saga.SG_Create_Grid(inputGrid)
+                sm.Get_System().Assign(inputGrid.Get_System())
+                param.sagaParam.Set_Value(param.sagaLayer)
         
         self.setFeedback("Module '%s' execution started." % modName)
         if sm.Execute() != 0:

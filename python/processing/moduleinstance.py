@@ -19,6 +19,9 @@
 #   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #   MA 02110-1301, USA.
 
+""" This module is part of the QGIS Processing Framework.
+"""
+
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
 from parameters import StateParameter, FeedbackParameter

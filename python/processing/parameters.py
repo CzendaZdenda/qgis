@@ -19,6 +19,9 @@
 #   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #   MA 02110-1301, USA.
 
+""" This module is part of the QGIS Processing Framework.
+"""
+
 import PyQt4.QtGui as QtGui
 from qgis.core import QgsMapLayer, QgsVectorLayer, QgsRasterLayer
 
@@ -101,6 +104,8 @@ class Parameter:
             return self.type()()
         except:
             return ""
+    def setDefaultValue(self, value):
+        self._defaultValue = value
     def validator(self):
         """ The parameters validator.
         Uses QValidator's interface, but concrete behavior may change

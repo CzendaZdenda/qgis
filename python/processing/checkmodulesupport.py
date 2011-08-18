@@ -63,9 +63,10 @@ def printModuleSupportSummary():
     uN = len(unsupportedStrings) 
     tN = sN + uN
     sP = sN * 100 / tN
-    print "Supported modules: %i (**%i%%**)" % (sN, sP)
-    print "Non supported modules: %i" % uN
-    print "Total registered modules: %i" % tN
+    print "###Status"
+    print "Supported modules: %i (**%i%%**)\n" % (sN, sP)
+    print "Non supported modules: %i\n" % uN
+    print "Total registered modules: %i\n" % tN
     print
     print "##Supported modules"
     for s in sorted(supportedStrings):

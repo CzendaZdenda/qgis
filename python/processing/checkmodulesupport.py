@@ -35,11 +35,19 @@ def printModuleSupportSummary():
     supportedStrings = list()
     unsupportedStrings = list()
     unsupportedParameterCountByType = dict()
+    interactiveModuleCount = 0
     for module in framework.modules():
         unsup = unsupportedParametersByModule(module)
-        if not unsup:
+        try:
+            # SAGA specific
+            isInteractive = module.interactive
+        except AttributeError:
+            isInteractive = False
+        if not unsup and not isInteractive:
             tagsString = ', '.join(module.tags())
             supportedStrings.append("**%s** (_%s_)" % (module.name(), tagsString))
+        elif not unsup and isInteractive:
+            unsupportedStrings.append("**%s** is _interactive_." % module.name())
         else:
             if len(unsup) == 1:
                 unsupString = "parameter " + unsup[0].name()
@@ -47,13 +55,19 @@ def printModuleSupportSummary():
                 unsupNames = [p.name()  for p in unsup]
                 unsupString = ', '.join(unsupNames[:-1])
                 unsupString = "parameters " + unsupString + ' & ' + unsupNames[-1]
-            unsupportedStrings.append("**%s** is missing support for %s." % (module.name(), unsupString))
-        for p in unsup: #this is SAGA specific
-            typeName = saga_api.SG_Parameter_Type_Get_Name(p.sagaParameter.Get_Type())
-            if typeName in unsupportedParameterCountByType:
-                unsupportedParameterCountByType[typeName] += 1
+            if not isInteractive:
+                unsupportedStrings.append("**%s** is missing support for %s." % (module.name(), unsupString))
             else:
-                unsupportedParameterCountByType[typeName] = 1
+                unsupportedStrings.append("**%s** is _interactive_ and missing support for %s." % (module.name(), unsupString))
+        try:
+            for p in unsup: #this is SAGA specific
+                typeName = saga_api.SG_Parameter_Type_Get_Name(p.sagaParameter.Get_Type())
+                if typeName in unsupportedParameterCountByType:
+                    unsupportedParameterCountByType[typeName] += 1
+                else:
+                    unsupportedParameterCountByType[typeName] = 1
+        except AttributeError:
+            pass
     print """
         This is a programatically generated list of modules that should be supported.
         Not all of these modules have been tested and some may only work under some

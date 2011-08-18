@@ -43,6 +43,8 @@ def printModuleSupportSummary():
             isInteractive = module.interactive
         except AttributeError:
             isInteractive = False
+        if isInteractive:
+            interactiveModuleCount += 1
         if not unsup and not isInteractive:
             tagsString = ', '.join(module.tags())
             supportedStrings.append("**%s** (_%s_)" % (module.name(), tagsString))
@@ -96,4 +98,6 @@ def printModuleSupportSummary():
             print "  * One unsupported module depends on type *%s*" % typ
         else:
             print "  * %i unsupported modules depend on type *%s*" % (n, typ)
+    print
+    print "%i modules are not supported because they are interactive." % interactiveModuleCount
 

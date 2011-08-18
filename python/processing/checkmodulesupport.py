@@ -37,6 +37,7 @@ def printModuleSupportSummary():
     unsupportedParameterCountByType = dict()
     interactiveModuleCount = 0
     for module in framework.modules():
+        moduleUnsupportedParameterTypes = set()
         unsup = unsupportedParametersByModule(module)
         try:
             # SAGA specific
@@ -64,6 +65,8 @@ def printModuleSupportSummary():
         try:
             for p in unsup: #this is SAGA specific
                 typeName = saga_api.SG_Parameter_Type_Get_Name(p.sagaParameter.Get_Type())
+                moduleUnsupportedParameterTypes.add(typeName)
+            for typeName in moduleUnsupportedParameterTypes:
                 if typeName in unsupportedParameterCountByType:
                     unsupportedParameterCountByType[typeName] += 1
                 else:

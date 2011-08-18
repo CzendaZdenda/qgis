@@ -196,6 +196,8 @@ class Module(processing.Module):
             qgisParam = Parameter(name, str, descr,
                 "Unsupported parameter of type %s." % typeName,
                 role=role)
+                
+        qgisParam.sagaParameter = sagaParam
         
         qgisParam.setMandatory(mandatory)
         self._parameters.add(qgisParam)

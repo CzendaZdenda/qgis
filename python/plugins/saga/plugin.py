@@ -72,6 +72,7 @@ class SAGAPlugin:
     def unload(self):
         for l in self.libraries:
             processing.framework.unregisterModuleProvider(l)
+            del l
 
 class InvalidLibrary(RuntimeError):
     def __init__(self, name):
@@ -96,6 +97,8 @@ class Library:
             except InvalidModule:
                 pass
         return self._modules
+    def __del__(self):
+        self.sagalib.Destroy()
 
 class InvalidModule(RuntimeError):
     def __init__(self, name):
@@ -245,6 +248,9 @@ class Module(processing.Module):
         return self._parameters
     def tags(self):
         return processing.Module.tags(self) | self.sagaTag
+    def __del__(self):
+        if self.module:
+            self.module.Destroy()
 
 class ModuleInstance(processing.ModuleInstance):
     def __init__(self, module):

@@ -21,6 +21,8 @@
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import QObject, SIGNAL
+from sys import float_info
+
 from ui_dialog import Ui_runDialog
 import processing
 from processing.parameters import *
@@ -100,7 +102,7 @@ class Dialog(QDialog, Ui_runDialog):
                 w.setRange(val.bottom(), val.top())
             w.setValue(value)
             self._connectWidgetToParameter(w, param,
-                "valueChanged(int)",
+                "valueChanged(double)",
                 QDoubleSpinBox.setValue, QDoubleSpinBox.value)
             return w
         if pc == RangeParameter:
@@ -216,6 +218,8 @@ class RangeBox(QHBoxLayout):
         QHBoxLayout.__init__(self, parent)
         self.lowBox = QDoubleSpinBox(parent)
         self.highBox = QDoubleSpinBox(parent)
+        self.lowBox.setMinimum(float_info.min)
+        self.highBox.setMaximum(float_info.max)
         self.addWidget(self.lowBox)
         self.addWidget(self.highBox)
         if values:

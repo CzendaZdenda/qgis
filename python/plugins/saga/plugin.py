@@ -22,6 +22,7 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
+from sys import float_info
 
 from osgeo import gdal
 
@@ -29,6 +30,8 @@ import os
 import processing
 from processing.parameters import *
 from processingplugin.dialog import RangeBox
+from blacklist import libraryIsBlackListed, moduleIsBlackListed
+from blacklist import tagIsBlackListed
 import saga_api as saga
 
 def getLibraryPaths(userPath = None):
@@ -42,7 +45,8 @@ def getLibraryPaths(userPath = None):
     for p in paths:
         #print "Seaching SAGA modules in " + p + "."
         if os.path.exists(p):
-            return [p + '/' + fn for fn in os.listdir(p)]
+            return [p + '/' + fn for fn in os.listdir(p) if
+                not libraryIsBlackListed(fn)]
     if noMLBpath:
         print "Warning: MLB_PATH not set."
     return []
@@ -108,7 +112,10 @@ class Module(processing.Module):
     def __init__(self, lib, i, iface = None):
         self.module = lib.Get_Module(i)
         if not self.module:
-            raise InvalidModule("#" + str(i))
+            raise InvalidModule("Module #%i is invalid" % i)
+        self._name = self.module.Get_Name()
+        if moduleIsBlackListed(self._name):
+            raise InvalidModule("Module %s is blacklisted" % self._name)
         self.iface = iface
         self.interactive = self.module.is_Interactive()
         self.grid = self.module.is_Grid()
@@ -120,17 +127,20 @@ class Module(processing.Module):
             self.module = lib.Get_Module_I(i)
         self._parameters = None
         libTags = set([processing.Tag(s.lower()) for s in 
-            lib.Get_Menu().c_str().split("|")])
+            lib.Get_Menu().c_str().split("|") if
+            not tagIsBlackListed(s.lower())])
         # tag to be added to the programatically generated ones.
         self.sagaTag = set([processing.Tag('saga')]) | libTags 
         self.layerRegistry = QgsMapLayerRegistry.instance()
         # only one instance per SAGA module
         self._instance = ModuleInstance(self)
         processing.Module.__init__(self,
-            self.module.Get_Name(),
+            self._name,
             self.module.Get_Description())
+            
     def instance(self):
         return self._instance
+        
     def addParameter(self, sagaParam):
         sagaToQGisParam = {
             #saga.PARAMETER_TYPE_Node:  ParameterList,
@@ -178,18 +188,19 @@ class Module(processing.Module):
                 else:
                     self._instance.inLayer.append(qgisParam)
                 # force update of layer
-                self.onParameterChanged(qgisParam, sagaParam, None)
+                qgisParam.sagaParameter = sagaParam
+                self.onParameterChanged(qgisParam, None)
             
             elif pc == NumericParameter:
                 vp = sagaParam.asValue()
                 if vp.has_Minimum():
                     bottom = vp.Get_Minimum()
                 else:
-                    bottom = 0
+                    bottom = float_info.min
                 if vp.has_Maximum():
                     top = vp.Get_Maximum()
                 else:
-                    top = 1000
+                    top = float_info.max
                 val = QDoubleValidator(None)
                 val.setRange(bottom, top)
                 qgisParam.setValidator(val)
@@ -208,9 +219,11 @@ class Module(processing.Module):
         # register callback to instance for parameter
         QObject.connect(self._instance,
             self._instance.valueChangedSignal(qgisParam),
-            lambda x: self.onParameterChanged(qgisParam, sagaParam, x))
+            lambda x: self.onParameterChanged(qgisParam, x))
             
-    def onParameterChanged(self, qgisParam, sagaParam, value):
+    def onParameterChanged(self, qgisParam, value):
+        sagaParam = qgisParam.sagaParameter
+        typ = sagaParam.Get_Type()
         pc = qgisParam.__class__
         # special cases - layers, choices, files, etc.
         # for layers we only set the saga param on excecution
@@ -218,7 +231,6 @@ class Module(processing.Module):
             pc == VectorLayerParameter or
             pc == RasterLayerParameter):
                 qgisParam.layer = value
-                qgisParam.sagaParam = sagaParam
         elif pc == RangeParameter:
             low, high = value
             sagaParam.asRange().Set_Range(low, high)
@@ -232,7 +244,8 @@ class Module(processing.Module):
             # convert QString to CSG_String
             string = saga.CSG_String(str(value))
             sagaParam.Get_Data().Set_Value(string)
-        else: # generic case - numerics, booleans, etc.
+        else:
+            # generic case - numerics, booleans, etc.
             sagaParam.Set_Value(value)
             
     def parameters(self):
@@ -246,11 +259,14 @@ class Module(processing.Module):
             for j in range(params.Get_Count()):
                 self.addParameter(params.Get_Parameter(j))
         return self._parameters
+        
     def tags(self):
         return processing.Module.tags(self) | self.sagaTag
+        
     def __del__(self):
         if self.module:
             self.module.Destroy()
+            self.module = None
 
 class ModuleInstance(processing.ModuleInstance):
     def __init__(self, module):
@@ -260,6 +276,7 @@ class ModuleInstance(processing.ModuleInstance):
             self.stateParameterValueChanged)
         self.inLayer = list()
         self.outLayer = list()
+        
     def stateParameterValueChanged(self, state):
         """ Only reacts to start running state, ignore others.
         """
@@ -278,6 +295,8 @@ class ModuleInstance(processing.ModuleInstance):
                 msg = "Mandatory parameter %s not set." % param.name()
                 self.setFeedback(msg, critical = True)
                 return
+            elif not param.layer:
+                continue
             basename = "qgis-saga%s" % id(param.layer)
             dpUri = str(param.layer.dataProvider().dataSourceUri())
             dpDescription = param.layer.dataProvider().description()              
@@ -289,7 +308,7 @@ class ModuleInstance(processing.ModuleInstance):
                     fn = saga.CSG_String("/tmp/%s.shp" % basename)
                     QgsVectorFileWriter.writeAsVectorFormat(param.layer,
                         fn.c_str(), "CP1250", param.layer.crs())
-                param.sagaParam.Set_Value(saga.SG_Create_Shapes(fn))
+                param.sagaParameter.Set_Value(saga.SG_Create_Shapes(fn))
             if pc == RasterLayerParameter:
                 isLocal = dpDescription.startsWith('GDAL provider')
                 if isLocal:
@@ -318,13 +337,13 @@ class ModuleInstance(processing.ModuleInstance):
                 # Store first input grid for output.
                 if not inputGrid:
                     inputGrid = grid
-                param.sagaParam.Set_Value(grid)
+                param.sagaParameter.Set_Value(grid)
         
         for param in self.outLayer:
             pc = param.__class__
             if pc == VectorLayerParameter:
                 param.sagaLayer = saga.SG_Create_Shapes()
-                param.sagaParam.Set_Value(param.sagaLayer)
+                param.sagaParameter.Set_Value(param.sagaLayer)
             if pc == RasterLayerParameter:
                 # use an input grid to get the grid system
                 if not inputGrid:
@@ -332,7 +351,7 @@ class ModuleInstance(processing.ModuleInstance):
                     return
                 param.sagaLayer = saga.SG_Create_Grid(inputGrid)
                 sm.Get_System().Assign(inputGrid.Get_System())
-                param.sagaParam.Set_Value(param.sagaLayer)
+                param.sagaParameter.Set_Value(param.sagaLayer)
         
         self.setFeedback("Module '%s' execution started." % modName)
         if sm.Execute() != 0:

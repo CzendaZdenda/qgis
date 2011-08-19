@@ -69,10 +69,10 @@ class ModuleInstance(QtCore.QObject):
         return self._parameters[key]
     def __setitem__(self, key, value):
         validator = key.validator()
-        if validator is not None:
-            state, _ = validator.validate(str(value), 0)
-            if state != QtGui.QValidator.Acceptable:
-                return
+        #if validator is not None:
+        #    state, _ = validator.validate(QtCore.QString(value), 0)
+        #    if state != QtGui.QValidator.Acceptable:
+        #        return
         self.emit(self.valueChangedSignal(key), value)
         self._parameters[key] = value
     def valueChangedSignal(self, param = None):

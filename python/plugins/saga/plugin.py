@@ -50,6 +50,14 @@ def getLibraryPaths(userPath = None):
     if noMLBpath:
         print "Warning: MLB_PATH not set."
     return []
+    
+def qgisizeString(s):
+    s = str(s)
+    s = str.replace(s, "Gridd", "Raster")
+    s = str.replace(s, "Grid", "Raster")
+    s = str.replace(s, "gridd", "raster")
+    s = str.replace(s, "grid", "raster")
+    return s
 
 class SAGAPlugin:
     def __init__(self, iface):
@@ -113,7 +121,7 @@ class Module(processing.Module):
         self.module = lib.Get_Module(i)
         if not self.module:
             raise InvalidModule("Module #%i is invalid" % i)
-        self._name = self.module.Get_Name()
+        self._name = qgisizeString(self.module.Get_Name())
         if moduleIsBlackListed(self._name):
             raise InvalidModule("Module %s is blacklisted" % self._name)
         self.iface = iface
@@ -126,8 +134,8 @@ class Module(processing.Module):
         elif self.interactive:
             self.module = lib.Get_Module_I(i)
         self._parameters = None
-        libTags = set([processing.Tag(s.lower()) for s in 
-            lib.Get_Menu().c_str().split("|") if
+        libTags = set([processing.Tag(qgisizeString(s.lower())) for
+            s in lib.Get_Menu().c_str().split("|") if
             not tagIsBlackListed(s.lower())])
         # tag to be added to the programatically generated ones.
         self.sagaTag = set([processing.Tag('saga')]) | libTags 
@@ -136,7 +144,7 @@ class Module(processing.Module):
         self._instance = ModuleInstance(self)
         processing.Module.__init__(self,
             self._name,
-            self.module.Get_Description())
+            qgisizeString(self.module.Get_Description()))
             
     def instance(self):
         return self._instance
@@ -160,7 +168,7 @@ class Module(processing.Module):
             # TODO: allow resampling?
             saga.PARAMETER_TYPE_Grid_System: None
         }
-        name = sagaParam.Get_Name()
+        name = qgisizeString(sagaParam.Get_Name())
         descr = sagaParam.Get_Description()
         typ = sagaParam.Get_Type()
         if sagaParam.is_Output():
@@ -178,8 +186,8 @@ class Module(processing.Module):
                 qgisParam.setDefaultValue(sagaParam.asDouble())
             if pc == ChoiceParameter:
                 choiceParam = sagaParam.asChoice()
-                choices = [choiceParam.Get_Item(i) for i in
-                    range(choiceParam.Get_Count())]
+                choices = [qgisizeString(choiceParam.Get_Item(i)) for i
+                    in range(choiceParam.Get_Count())]
                 qgisParam.setChoices(choices)
                 qgisParam.setDefaultValue(0)
                 
@@ -322,7 +330,7 @@ class ModuleInstance(processing.ModuleInstance):
                     msg = "Sorry. Only local raster layers supported."
                     self.setFeedback(msg, critical = True)
                     return
-                self.setFeedback("Converting raster to SAGA grid...")
+                self.setFeedback("Converting raster to SAGA format...")
                 # convert input to saga grid file -- adapted from
                 # GDAL tutorial
                 driver = gdal.GetDriverByName("SAGA")
@@ -333,7 +341,7 @@ class ModuleInstance(processing.ModuleInstance):
                 destination = None
                 grid = saga.SG_Create_Grid()
                 if grid.Create(sagaFn) == 0:
-                    self.setFeedback("Couldn't create SAGA input grid.",
+                    self.setFeedback("Couldn't create SAGA input raster.",
                         critical = True)
                     return
                 # Store first input grid for output.
@@ -349,7 +357,7 @@ class ModuleInstance(processing.ModuleInstance):
             if pc == RasterLayerParameter:
                 # use an input grid to get the grid system
                 if not inputGrid:
-                    self.setFeedback("No input grid specified.", True)
+                    self.setFeedback("No input raster specified.", True)
                     return
                 param.sagaLayer = saga.SG_Create_Grid(inputGrid)
                 sm.Get_System().Assign(inputGrid.Get_System())

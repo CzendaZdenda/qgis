@@ -44,32 +44,55 @@ class ProcessingPlugin:
         self._iface = iface
         self.panel = None
         self.settings = None
+        self.aboutDialog = None
+        
     def initGui(self):
         from PyQt4.QtCore import QObject, SIGNAL
         from PyQt4.QtGui import QAction, QMenu
         self.menu = QMenu()
         self.menu.setTitle(self.menu.tr("Processing", "Processing"))
-        self.panelAction = QAction(self.menu.tr("&Panel", "Processing"),
+        
+        self.panelAction = QAction(
+            self.menu.tr("&Panel", "Processing"),
             self._iface.mainWindow())
         self.panelAction.setCheckable(True)
         self.menu.addAction(self.panelAction)
         QObject.connect(self.panelAction,
             SIGNAL("triggered(bool)"), self.showPanel)
         menuBar = self._iface.mainWindow().menuBar()
-        self.settingsAction = QAction(self.menu.tr("&Settings", "Processing"),
+        
+        self.settingsAction = QAction(
+            self.menu.tr("&Settings", "Processing"),
             self._iface.mainWindow())
         self.menu.addAction(self.settingsAction)
         QObject.connect(self.settingsAction,
             SIGNAL("triggered()"), self.showSettings)
+        
+        self.aboutAction = QAction(
+            self.menu.tr("&About", "Processing"),
+            self._iface.mainWindow())
+        self.menu.addAction(self.aboutAction)
+        QObject.connect(self.aboutAction,
+            SIGNAL("triggered()"), self.showAboutDialog)
+        
         menuBar.insertMenu(menuBar.actions()[-1], self.menu)
+        
     def unload(self):
         if self.panel is not None:
             self.panel.setVisible(False)
+            
     def showSettings(self):
         from settings import Settings
         if not self.settings:
             self.settings = Settings(self._iface.mainWindow())
         self.settings.setVisible(True)
+    
+    def showAboutDialog(self):
+        from aboutdialog import AboutDialog
+        if not self.aboutDialog:
+            self.aboutDialog = AboutDialog(self._iface.mainWindow())
+        self.aboutDialog.setVisible(True)
+        
     def showPanel(self, visible = True):
         from panel import Panel
         from PyQt4.QtCore import QObject, SIGNAL

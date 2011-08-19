@@ -174,6 +174,8 @@ class Module(processing.Module):
             if not pc: # We are ignoring certain types of parameters
                 return            
             qgisParam = pc(name, descr, role=role)
+            if pc == NumericParameter:
+                qgisParam.setDefaultValue(sagaParam.asDouble())
             if pc == ChoiceParameter:
                 choiceParam = sagaParam.asChoice()
                 choices = [choiceParam.Get_Item(i) for i in

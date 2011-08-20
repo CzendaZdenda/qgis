@@ -50,15 +50,18 @@
           </property>
           <property name="minimumSize">
            <size>
-            <width>85</width>
-            <height>70</height>
+            <width>64</width>
+            <height>64</height>
            </size>
           </property>
           <property name="maximumSize">
            <size>
-            <width>85</width>
-            <height>70</height>
+            <width>64</width>
+            <height>64</height>
            </size>
+          </property>
+          <property name="pixmap">
+           <pixmap resource="processing.qrc">:/icon/64</pixmap>
           </property>
           <property name="scaledContents">
            <bool>true</bool>
@@ -124,7 +127,9 @@ p, li { white-space: pre-wrap; }
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="processing.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

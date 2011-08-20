@@ -146,7 +146,7 @@ class Module:
         mechanism. See parameters module for more information.
     """
     def __init__(self, name,
-        description = "", tags = None):
+        description = "", tags = None, parameters = None):
             """ Module initialization.
             Most attributes of the object can be set at initialization.
             As a backend developer you may want to override the getters
@@ -158,6 +158,7 @@ class Module:
             self._name = name
             self._description = description
             self._tags = tags
+            self._parameters = parameters
     def instance(self):
         """ Return a new module instance.
         Call this instead of the ModuleInstance constructor.
@@ -193,4 +194,7 @@ class Module:
         Specifiy on construction or override this method to provide your
         own. Else raises an NotImplementedError.
         """
-        raise NotImplementedError
+        if self._parameters:
+            return self._parameters
+        else:
+            raise NotImplementedError

@@ -8,11 +8,11 @@ from PyQt4.QtGui import *
 
 from ui_aboutdialog import Ui_aboutDialog
 from processingplugin import name, description, version
-import platform
+import processing_rc
 
 class AboutDialog(QDialog, Ui_aboutDialog):
 
 	def __init__(self, parent=None):
 		QDialog.__init__(self, parent)
 		self.setupUi(self)
-		self.logo.setPixmap(QPixmap("processing.png"))
+		self.logo.setPixmap(QPixmap(":/icon/64"))

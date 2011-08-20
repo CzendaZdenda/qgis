@@ -26,7 +26,8 @@ def description():
     return "Lists available modules sorted by tag in a panel."
     
 def icon():
-    return "processing.png"
+    import processing_rc
+    return ":/icon/32"
     
 def version():
     return "Version 0.1"

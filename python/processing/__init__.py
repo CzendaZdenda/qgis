@@ -111,7 +111,14 @@ class Framework:
         if not tags: return tags
         tags, _ = zip(*filter(criterion, tags))
         return tags
-        
+    def __getitem__(self, name):
+        """ Scripting convenience function.
+        Get a module by name.
+        """
+        modules = filter(lambda m: m.name() == name, self.modules())
+        if modules:
+            return modules[0]
+        return None
     """ Default set of tags. Not binding. It is recommended that
     backends provide their own tags in addition to these, including
     at least one describing the backend library, e.g. "saga".
@@ -198,3 +205,15 @@ class Module:
             return self._parameters
         else:
             raise NotImplementedError
+    def execute(self, **kwargs):
+        """ Scripting convenience function.
+        Excecute a ModuleInstance of this Module, with specified
+        parameters.
+        """
+        from PyQt4.QtCore import QObject
+        instance = self.instance()
+        #QObject.connect(instance, instance.valueChangedSignal(instance.feedbackParameter), print)
+        for p in instance.parameters():
+            if p.name() in kwargs:
+                instance[p] = kwargs[p.name()]
+        instance.setState(parameters.StateParameter.State.running)

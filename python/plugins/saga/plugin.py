@@ -169,7 +169,7 @@ class Module(processing.Module):
             saga.PARAMETER_TYPE_Grid_System: None
         }
         name = qgisizeString(sagaParam.Get_Name())
-        descr = sagaParam.Get_Description()
+        descr = qgisizeString(sagaParam.Get_Description())
         typ = sagaParam.Get_Type()
         if sagaParam.is_Output():
             role = Parameter.Role.output

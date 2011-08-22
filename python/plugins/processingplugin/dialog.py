@@ -43,7 +43,7 @@ class Dialog(QDialog, Ui_runDialog):
         self.moduleinstance = module.instance()
         self.setupUi(self)
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
-        self.text.setText(module.description())
+        self._fillTextTab(module)
         self.execButton = QPushButton(self.tr("&Execute"));
         self.execButton.setDefault(True)
         self.buttons.addButton(self.execButton, QDialogButtonBox.ActionRole);
@@ -61,6 +61,22 @@ class Dialog(QDialog, Ui_runDialog):
         # Start module instance on button click
         QObject.connect(self.execButton, SIGNAL("clicked()"),
             self._onExecButtonClicked)
+    def _fillTextTab(self, module):
+        mDesc = module.description()
+        pWithDesc = filter(lambda p: p.description(), module.parameters())
+        if not (mDesc or pWithDesc):
+            self.tabWidget.removeTab(1)
+            return
+        mTitle = "Module <em>%s</em>" % module.name()
+        text = "<h1 class='module'>%s</h1>" % mTitle
+        tags = ", ".join(module.tags())
+        text += "<p class='tags'><small>%s</small></p>" % tags
+        text += "<p class='module'>%s</p>" %  mDesc
+        for p in pWithDesc:
+            pTitle = "Parameter <em>%s</em>" % p.name()
+            text += "<h2 class='param'>%s</h2>" % pTitle
+            text += "<p class='param'>%s</p>" % p.description()
+        self.text.setText("<html><body>%s</body></html>" % text)
     def rebuildDialog(self):
         for param, value in self.moduleinstance.parameters().items():
             label = param.name()

@@ -52,11 +52,16 @@ def getLibraryPaths(userPath = None):
     return []
     
 def qgisizeString(s):
-    s = str(s)
-    s = str.replace(s, "Gridd", "Raster")
-    s = str.replace(s, "Grid", "Raster")
-    s = str.replace(s, "gridd", "raster")
-    s = str.replace(s, "grid", "raster")
+    try:
+        s = str(s)
+        s = str.replace(s, "Gridd", "Raster")
+        s = str.replace(s, "Grid", "Raster")
+        s = str.replace(s, "gridd", "raster")
+        s = str.replace(s, "grid", "raster")
+    except:
+        # Some unicode characters seem to produce exceptions.
+        # Just ignore those cases.
+        pass
     return s
 
 class SAGAPlugin:
@@ -189,7 +194,7 @@ class Module(processing.Module):
                 choices = [qgisizeString(choiceParam.Get_Item(i)) for i
                     in range(choiceParam.Get_Count())]
                 qgisParam.setChoices(choices)
-                qgisParam.setDefaultValue(0)
+                qgisParam.setDefaultValue(sagaParam.asInt())
                 
             elif (pc == VectorLayerParameter or
                 pc == RasterLayerParameter):

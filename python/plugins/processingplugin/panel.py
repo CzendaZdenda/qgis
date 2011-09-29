@@ -31,7 +31,7 @@ class Panel(QDockWidget, Ui_dock):
         self._iface = iface
         self._dialogs = list()
         self.setupUi(self)
-        tags = list(processing.framework.representativeTags())
+        tags = list(processing.framework.usedTags())
         tags.sort()
         self.buildModuleList(tags)
     	QObject.connect(self.moduleList,

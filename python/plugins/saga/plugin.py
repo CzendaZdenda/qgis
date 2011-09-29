@@ -45,7 +45,7 @@ def getLibraryPaths(userPath = None):
     for p in paths:
         #print "Seaching SAGA modules in " + p + "."
         if os.path.exists(p):
-            return [p + '/' + fn for fn in os.listdir(p) if
+            return [os.path.join(p, fn) for fn in os.listdir(p) if
                 not libraryIsBlackListed(fn)]
     if noMLBpath:
         print "Warning: MLB_PATH not set."
@@ -63,6 +63,13 @@ def qgisizeString(s):
         # Just ignore those cases.
         pass
     return s
+
+def qgisTempFilename(basename, extension):
+    dir = tempfile.gettempdir()
+    return os.path.join(dir, basename + "." + extension)
+    
+def sagaTempFilename(basename, extension):
+    return CSG_String(qgisTempFilename(basename, extension))
 
 class SAGAPlugin:
     def __init__(self, iface):
@@ -320,17 +327,17 @@ class ModuleInstance(processing.ModuleInstance):
                 if isLocal:
                     fn = saga.CSG_String(dpUri)
                 else:
-                    fn = saga.CSG_String("/tmp/%s.shp" % basename)
+                    fn = sagaTempFilename(basename, "shp")
                     QgsVectorFileWriter.writeAsVectorFormat(param.layer,
                         fn.c_str(), "CP1250", param.layer.crs())
                 param.sagaParameter.Set_Value(saga.SG_Create_Shapes(fn))
             if pc == RasterLayerParameter:
                 isLocal = dpDescription.startsWith('GDAL provider')
                 if isLocal:
-                    sagaFn = saga.CSG_String("/tmp/%s.sgrd" % basename)
+                    sagaFn = sagaTempFilename(basename, "sgrd")
                     # GDAL & QGIS use the sdat file as reference,
                     # unlike SAGA
-                    qgisFn = "/tmp/%s.sdat" % basename
+                    qgisFn = qgisTempFilename(basename, "sdat")
                 else:
                     msg = "Sorry. Only local raster layers supported."
                     self.setFeedback(msg, critical = True)
@@ -379,7 +386,7 @@ class ModuleInstance(processing.ModuleInstance):
                 pc = param.__class__
                 if pc == VectorLayerParameter:
                     # no implicit conversion!
-                    fn = saga.CSG_String("/tmp/%s.shp" % basename)
+                    fn = sagaTempFilename(basename, "shp")
                     # tell SAGA to save the layer
                     param.sagaLayer.Save(fn)
                     # load it into QGIS.
@@ -387,8 +394,8 @@ class ModuleInstance(processing.ModuleInstance):
                     iface.addVectorLayer(fn.c_str(), basename, "ogr")
                 elif pc == RasterLayerParameter:
                     # no implicit conversion!
-                    sagaFn = saga.CSG_String("/tmp/%s.sgrd" % basename)
-                    qgisFn = "/tmp/%s.sdat" % basename
+                    sagaFn = sagaTempFilename(basename, "sgrd")
+                    qgisFn = qgisTempFilename(basename, "sdat")
                     # tell SAGA to save the layer
                     param.sagaLayer.Save(sagaFn)
                     # load it into QGIS.

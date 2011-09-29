@@ -34,6 +34,7 @@
 #include "qgsconfig.h"
 
 #include <ogr_api.h>
+#include <gdal_priv.h>
 #include <cpl_conv.h> // for setting gdal options
 
 QObject * QgsApplication::mFileOpenEventReceiver;
@@ -49,6 +50,7 @@ QString QgsApplication::mConfigPath = QDir::homePath() + QString( "/.qgis/" );
 bool QgsApplication::mRunningFromBuildDir = false;
 QString QgsApplication::mBuildSourcePath;
 QString QgsApplication::mBuildOutputPath;
+QStringList QgsApplication::mGdalSkipList;
 
 /*!
   \class QgsApplication
@@ -710,4 +712,38 @@ QString QgsApplication::relativePathToAbsolutePath( QString rpath, QString targe
 #endif
 
   return targetElems.join( "/" );
+}
+
+void QgsApplication::skipGdalDriver( QString theDriver )
+{
+  if ( mGdalSkipList.contains( theDriver ) || theDriver.isEmpty() )
+  {
+    return;
+  }
+  mGdalSkipList << theDriver;
+  applyGdalSkippedDrivers();
+}
+
+void QgsApplication::restoreGdalDriver( QString theDriver )
+{
+  if ( !mGdalSkipList.contains( theDriver ) )
+  {
+    return;
+  }
+  int myPos = mGdalSkipList.indexOf( theDriver );
+  if ( myPos >= 0 )
+  {
+    mGdalSkipList.removeAt( myPos );
+  }
+  applyGdalSkippedDrivers();
+}
+
+void QgsApplication::applyGdalSkippedDrivers()
+{
+  mGdalSkipList.removeDuplicates();
+  QString myDriverList = mGdalSkipList.join(" ");
+  QgsDebugMsg( "Gdal Skipped driver list set to:" );
+  QgsDebugMsg( myDriverList );
+  CPLSetConfigOption("GDAL_SKIP", myDriverList.toUtf8());
+  GetGDALDriverManager()->AutoSkipDrivers();
 }

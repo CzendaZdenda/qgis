@@ -69,6 +69,10 @@ class QgsBrowserDockWidget;
 class QgsSnappingDialog;
 class QgsGPSInformationWidget;
 
+class QgsDecorationCopyright;
+class QgsDecorationNorthArrow;
+class QgsDecorationScaleBar;
+
 #include <QMainWindow>
 #include <QToolBar>
 #include <QAbstractSocket>
@@ -462,6 +466,8 @@ class QgisApp : public QMainWindow, private Ui::MainWindow
     //! Add a databaselayer to the map
     void addDatabaseLayer();
     //#endif
+	//! Add a list of database layers to the map
+    void addDatabaseLayers( QStringList const & layerPathList, QString const & providerKey );
     //#ifdef HAVE_SPATIALITE
     //! Add a SpatiaLite layer to the map
     void addSpatiaLiteLayer();
@@ -864,6 +870,7 @@ class QgisApp : public QMainWindow, private Ui::MainWindow
     bool createDB();
     void createMapTips();
     void updateCRSStatusBar();
+    void createDecorations();
 
     // actions for menus and toolbars -----------------
 
@@ -1050,6 +1057,10 @@ class QgisApp : public QMainWindow, private Ui::MainWindow
 
     //! Persistent tile scale slider
     QgsTileScaleWidget * mpTileScaleWidget;
+
+    QgsDecorationCopyright* mDecorationCopyright;
+    QgsDecorationNorthArrow* mDecorationNorthArrow;
+    QgsDecorationScaleBar* mDecorationScaleBar;
 
     int mLastComposerId;
 

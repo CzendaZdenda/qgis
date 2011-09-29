@@ -16,7 +16,7 @@
  ***************************************************************************/
 #include "qgswmsserver.h"
 #include "qgsconfigparser.h"
-#include "qgsepsgcache.h"
+#include "qgscrscache.h"
 #include "qgsfield.h"
 #include "qgsgeometry.h"
 #include "qgsmaplayer.h"
@@ -110,6 +110,22 @@ QDomDocument QgsWMSServer::getCapabilities()
   QString requestUrl = getenv( "REQUEST_URI" );
   QUrl mapUrl( requestUrl );
   mapUrl.setHost( QString( getenv( "SERVER_NAME" ) ) );
+
+  //Add non-default ports to url
+  QString portString = getenv( "SERVER_PORT" );
+  if ( !portString.isEmpty() )
+  {
+    bool portOk;
+    int portNumber = portString.toInt( &portOk );
+    if ( portOk )
+    {
+      if ( portNumber != 80 )
+      {
+        mapUrl.setPort( portNumber );
+      }
+    }
+  }
+
   if ( QString( getenv( "HTTPS" ) ).compare( "on", Qt::CaseInsensitive ) == 0 )
   {
     mapUrl.setScheme( "https" );
@@ -1027,19 +1043,8 @@ int QgsWMSServer::configureMapRender( const QPaintDevice* paintDevice ) const
     QgsDebugMsg( "enable on the fly projection" );
     QgsProject::instance()->writeEntry( "SpatialRefSys", "/ProjectionsEnabled", 1 );
 
-    QString crsString = crsIt->second;
-    if ( !( crsString.left( 4 ) == "EPSG" ) )
-    {
-      return 3; // only EPSG ids supported
-    }
-    long epsgId = crsString.section( ":", 1, 1 ).toLong( &conversionSuccess );
-    if ( !conversionSuccess )
-    {
-      return 4;
-    }
-
     //destination SRS
-    outputCRS = QgsEPSGCache::instance()->searchCRS( epsgId );
+    outputCRS = QgsCRSCache::instance()->crsByAuthId( crsIt->second );
     if ( !outputCRS.isValid() )
     {
       QgsDebugMsg( "Error, could not create output CRS from EPSG" );
@@ -1205,6 +1210,7 @@ int QgsWMSServer::featureInfoFromVectorLayer( QgsVectorLayer* layer,
   provider->select( provider->attributeIndexes(), searchRect, addWktGeometry || featureBBox, true );
   while ( provider->nextFeature( feature ) )
   {
+    ++featureCounter;
     if ( featureCounter > nFeatures )
     {
       break;
@@ -1260,6 +1266,15 @@ int QgsWMSServer::featureInfoFromVectorLayer( QgsVectorLayer* layer,
       {
         featureBBox->combineExtentWith( &box );
       }
+
+      //append feature bounding box to feature info xml
+      QDomElement bBoxElem = infoDocument.createElement( "BoundingBox" );
+      bBoxElem.setAttribute( "CRS", mapRender->destinationCrs().authid() );
+      bBoxElem.setAttribute( "minx", box.xMinimum() );
+      bBoxElem.setAttribute( "maxx", box.xMaximum() );
+      bBoxElem.setAttribute( "miny", box.yMinimum() );
+      bBoxElem.setAttribute( "maxy", box.yMaximum() );
+      featureElement.appendChild( bBoxElem );
     }
   }
 

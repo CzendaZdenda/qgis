@@ -31,6 +31,7 @@
 
 #include "qgslabel.h"
 #include "qgslabelattributes.h"
+#include "qgssymbollayerv2utils.h" //for pointOnLineWithDistance
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -359,6 +360,11 @@ void QgsComposerMap::paint( QPainter* painter, const QStyleOptionGraphicsItem* i
 
 void QgsComposerMap::updateCachedImage( void )
 {
+  //If we have a locked layer set then don't reload the map canvas.
+  if ( mKeepLayerSet )
+  {
+    return;
+  }
   syncLayerSet(); //layer list may have changed
   mCacheUpdated = false;
   cache();
@@ -838,7 +844,17 @@ void QgsComposerMap::syncLayerSet()
     return;
   }
 
-  QStringList currentLayerSet = mMapRenderer->layerSet();
+  //if layer set is fixed, do a lookup in the layer registry to also find the non-visible layers
+  QStringList currentLayerSet;
+  if ( mKeepLayerSet )
+  {
+    currentLayerSet = QgsMapLayerRegistry::instance()->mapLayers().uniqueKeys();
+  }
+  else //only consider layers visible in the map
+  {
+    currentLayerSet = mMapRenderer->layerSet();
+  }
+
   for ( int i = mLayerSet.size() - 1; i >= 0; --i )
   {
     if ( !currentLayerSet.contains( mLayerSet.at( i ) ) )
@@ -881,7 +897,7 @@ void QgsComposerMap::drawGrid( QPainter* p )
     for ( ; vIt != verticalLines.constEnd(); ++vIt )
     {
       //start mark
-      crossEnd1 = pointOnLineWithDistance( vIt->second.p1(), vIt->second.p2(), mCrossLength );
+      crossEnd1 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( vIt->second.p1(), vIt->second.p2(), mCrossLength );
       p->drawLine( vIt->second.p1(), crossEnd1 );
 
       //test for intersection with every horizontal line
@@ -890,13 +906,13 @@ void QgsComposerMap::drawGrid( QPainter* p )
       {
         if ( hIt->second.intersect( vIt->second, &intersectionPoint ) == QLineF::BoundedIntersection )
         {
-          crossEnd1 = pointOnLineWithDistance( intersectionPoint, vIt->second.p1(), mCrossLength );
-          crossEnd2 = pointOnLineWithDistance( intersectionPoint, vIt->second.p2(), mCrossLength );
+          crossEnd1 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( intersectionPoint, vIt->second.p1(), mCrossLength );
+          crossEnd2 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( intersectionPoint, vIt->second.p2(), mCrossLength );
           p->drawLine( crossEnd1, crossEnd2 );
         }
       }
       //end mark
-      QPointF crossEnd2 = pointOnLineWithDistance( vIt->second.p2(), vIt->second.p1(), mCrossLength );
+      QPointF crossEnd2 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( vIt->second.p2(), vIt->second.p1(), mCrossLength );
       p->drawLine( vIt->second.p2(), crossEnd2 );
     }
 
@@ -904,7 +920,7 @@ void QgsComposerMap::drawGrid( QPainter* p )
     for ( ; hIt != horizontalLines.constEnd(); ++hIt )
     {
       //start mark
-      crossEnd1 = pointOnLineWithDistance( hIt->second.p1(), hIt->second.p2(), mCrossLength );
+      crossEnd1 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( hIt->second.p1(), hIt->second.p2(), mCrossLength );
       p->drawLine( hIt->second.p1(), crossEnd1 );
 
       vIt = verticalLines.constBegin();
@@ -912,13 +928,13 @@ void QgsComposerMap::drawGrid( QPainter* p )
       {
         if ( vIt->second.intersect( hIt->second, &intersectionPoint ) == QLineF::BoundedIntersection )
         {
-          crossEnd1 = pointOnLineWithDistance( intersectionPoint, hIt->second.p1(), mCrossLength );
-          crossEnd2 = pointOnLineWithDistance( intersectionPoint, hIt->second.p2(), mCrossLength );
+          crossEnd1 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( intersectionPoint, hIt->second.p1(), mCrossLength );
+          crossEnd2 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( intersectionPoint, hIt->second.p2(), mCrossLength );
           p->drawLine( crossEnd1, crossEnd2 );
         }
       }
       //end mark
-      crossEnd1 = pointOnLineWithDistance( hIt->second.p2(), hIt->second.p1(), mCrossLength );
+      crossEnd1 = QgsSymbolLayerV2Utils::pointOnLineWithDistance( hIt->second.p2(), hIt->second.p1(), mCrossLength );
       p->drawLine( hIt->second.p2(), crossEnd1 );
     }
 

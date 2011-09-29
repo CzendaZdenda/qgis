@@ -42,7 +42,16 @@ class ContourModuleInstance(processing.ModuleInstance):
             inLayer = self[self.inParam]
             outLayer = self[self.outParam]
             self.contour(inLayer, outLayer)
-            state = StateParameter.State.stopped
+            self.setState(StateParameter.State.stopped)
     def contour(self, inLayer, outLayer):
-        print inLayer, outLayer
-        self.setFeedback("Here goes the actual algorithm.")
+        ds = 
+        ogr_ds = ogr.GetDriverByName('ESRI Shapefile').CreateDataSource('tmp/contour.shp')
+        ogr_lyr = ogr_ds.CreateLayer('contour')
+        field_defn = ogr.FieldDefn('ID', ogr.OFTInteger)
+        ogr_lyr.CreateField(field_defn)
+        field_defn = ogr.FieldDefn('elev', ogr.OFTReal)
+        ogr_lyr.CreateField(field_defn)
+
+        gdal.ContourGenerate(ds.GetRasterBand(1), 10, 0, [], 0, 0, ogr_lyr, 0, 1)
+
+        ds = None

@@ -29,7 +29,7 @@ from osgeo import gdal
 import os
 import processing
 from processing.parameters import *
-from processingplugin.dialog import RangeBox
+from processingmanager.dialog import RangeBox
 from blacklist import libraryIsBlackListed, moduleIsBlackListed
 from blacklist import tagIsBlackListed
 import saga_api as saga
@@ -43,7 +43,6 @@ def getLibraryPaths(userPath = None):
     if userPath:
         paths = [userPath] + paths
     for p in paths:
-        #print "Seaching SAGA modules in " + p + "."
         if os.path.exists(p):
             return [os.path.join(p, fn) for fn in os.listdir(p) if
                 not libraryIsBlackListed(fn)]
@@ -87,7 +86,7 @@ class SAGAPlugin:
                 except InvalidLibrary:
                     pass
             if self.libraries:
-                keepSearching = False
+                keepSeaching = False
             else:
                 userPath, keepSearching = QInputDialog.getText(
                     self.window,

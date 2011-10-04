@@ -38,7 +38,7 @@ def qgisMinimumVersion():
 def authorName():
     return "Camilo Polymeris & Julien Malik"
 
-class ProcessingPlugin:
+class ProcessingManager:
     """ Processing plugin
     """
     def __init__(self, iface):
@@ -105,4 +105,4 @@ class ProcessingPlugin:
         self.panel.setVisible(visible)
 
 def classFactory(iface):
-    return ProcessingPlugin(iface)
+    return ProcessingManager(iface)

@@ -25,6 +25,7 @@
 import PyQt4.QtGui as QtGui
 import PyQt4.QtCore as QtCore
 from parameters import StateParameter, FeedbackParameter
+from collections import OrderedDict
 
 class ModuleInstance(QtCore.QObject):
     """ Represents a single setup and execution of a module.
@@ -52,7 +53,7 @@ class ModuleInstance(QtCore.QObject):
                 self.module().parameters()]
             p += [(self.stateParameter, StateParameter.State.stopped),
                 (self.feedbackParameter, None)]
-            self._parameters = dict(p)
+            self._parameters = OrderedDict(p)
         return self._parameters
     def feedback(self):
         return self[self.feedbackParameter]

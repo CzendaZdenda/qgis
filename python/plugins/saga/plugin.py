@@ -235,7 +235,7 @@ class Module(processing.Module):
         qgisParam.sagaParameter = sagaParam
         
         qgisParam.setMandatory(mandatory)
-        self._parameters.add(qgisParam)
+        self._parameters.append(qgisParam)
         
         # register callback to instance for parameter
         QObject.connect(self._instance,
@@ -272,7 +272,7 @@ class Module(processing.Module):
     def parameters(self):
         if self._parameters is not None:
             return self._parameters
-        self._parameters = set()
+        self._parameters = list()
         paramsList = [self.module.Get_Parameters()]
         paramsList += [self.module.Get_Parameters(i) for i in
             range(self.module.Get_Parameters_Count())]

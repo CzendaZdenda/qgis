@@ -48,6 +48,7 @@ class Dialog(QDialog, Ui_runDialog):
         self.execButton.setDefault(True)
         self.buttons.addButton(self.execButton, QDialogButtonBox.ActionRole);
         self.rebuildDialog()
+        self.advancedScroll.hide()
         # Rebuild the dialog if parameter structure changes.
         QObject.connect(self.moduleinstance,
             self.moduleinstance.valueChangedSignal(),
@@ -78,16 +79,28 @@ class Dialog(QDialog, Ui_runDialog):
             text += "<p class='param'>%s</p>" % p.description()
         self.text.setText("<html><body>%s</body></html>" % text)
     def rebuildDialog(self):
-        for param, value in self.moduleinstance.parameters().items():
+        for param in self.moduleinstance.module().parameters()
+			value = self.moduleinstance[param]
             label = param.name()
-            if not param.isMandatory(): # optional parameters in italics
-                label = '<i>%s</i>' % label
             if param.role() == Parameter.Role.output:
                 label = '&gt; %s' % label
             label = '<html>%s</html>' % label
             widget = self._widgetByType(param, value)
-            if widget is not None:
-                self.form.addRow(label, widget)
+            if widget is None:
+				continue
+			if param.isMandatory():
+				self.mandatoryForm.addRow(label, widget)
+			elif param.userLevel() == Parameter.UserLevel.basic:
+				self.optionalForm.addRow(label, widget)
+			else:
+				self.advancedForm.addRow(label, widget)
+		if not self.mandatoryForm.rowCount():
+			self.mandatoryTab.hide()
+		if not (self.optionalForm.rowCount() +
+			self.advancedForm.rowCount()):
+			self.optionalTab.hide()
+		if not self.advancedForm.rowCount():
+			self.advancedButton.hide()
     def _connectWidgetToParameter(self, widget,
         param, signal, setter, getter):
         instance = self.moduleinstance

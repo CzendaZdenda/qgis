@@ -124,14 +124,14 @@ bool QgsOgrProvider::convertField( QgsField &field, const QTextCodec &encoding )
 
 
 QgsVectorLayerImport::ImportError QgsOgrProvider::createEmptyLayer(
-    const QString& uri,
-    const QgsFieldMap &fields,
-    QGis::WkbType wkbType,
-    const QgsCoordinateReferenceSystem *srs,
-    bool overwrite,
-    QMap<int, int> *oldToNewAttrIdxMap,
-    QString *errorMessage,
-    const QMap<QString,QVariant> *options )
+  const QString& uri,
+  const QgsFieldMap &fields,
+  QGis::WkbType wkbType,
+  const QgsCoordinateReferenceSystem *srs,
+  bool overwrite,
+  QMap<int, int> *oldToNewAttrIdxMap,
+  QString *errorMessage,
+  const QMap<QString, QVariant> *options )
 {
   QString encoding;
   QString driverName = "ESRI Shapefile";
@@ -170,8 +170,8 @@ QgsVectorLayerImport::ImportError QgsOgrProvider::createEmptyLayer(
   }
 
   QgsVectorFileWriter *writer = new QgsVectorFileWriter(
-            uri, encoding, fields, wkbType,
-            srs, driverName, dsOptions, layerOptions );
+    uri, encoding, fields, wkbType,
+    srs, driverName, dsOptions, layerOptions );
 
   QgsVectorFileWriter::WriterError error = writer->hasError();
   if ( error )
@@ -565,6 +565,9 @@ void QgsOgrProvider::setRelevantFields( bool fetchGeometry, const QgsAttributeLi
 
     OGR_L_SetIgnoredFields( ogrLayer, ignoredFields.data() );
   }
+#else
+  Q_UNUSED( fetchGeometry );
+  Q_UNUSED( fetchAttributes );
 #endif
 }
 
@@ -2452,7 +2455,7 @@ QGISEXTERN QgsDataItem * dataItem( QString thePath, QgsDataItem* parentItem )
 
       QgsDebugMsg( QString( "ogrType = %1 layertype = %2" ).arg( ogrType ).arg( layerType ) );
 
-      QString name = info.fileName();
+      QString name = info.completeBaseName();
 
       QString layerName = FROM8( OGR_FD_GetName( hDef ) );
       QgsDebugMsg( "OGR layer name : " + layerName );
@@ -2464,7 +2467,9 @@ QGISEXTERN QgsDataItem * dataItem( QString thePath, QgsDataItem* parentItem )
         path += "/" + name;
       }
 
-      QString layerUri = thePath + "|layerid=" + QString::number( i );
+      QString layerUri = thePath;
+      if ( collection )
+        layerUri += "|layerid=" + QString::number( i );
       QgsDebugMsg( "OGR layer uri : " + layerUri );
 
       QgsOgrLayerItem * item = new QgsOgrLayerItem( collection ? collection : parentItem, name, path, layerUri, layerType );
@@ -2491,10 +2496,10 @@ QGISEXTERN QgsVectorLayerImport::ImportError createEmptyLayer(
   bool overwrite,
   QMap<int, int> *oldToNewAttrIdxMap,
   QString *errorMessage,
-  const QMap<QString,QVariant> *options )
+  const QMap<QString, QVariant> *options )
 {
   return QgsOgrProvider::createEmptyLayer(
-                  uri, fields, wkbType, srs, overwrite,
-                  oldToNewAttrIdxMap, errorMessage, options
-                );
+           uri, fields, wkbType, srs, overwrite,
+           oldToNewAttrIdxMap, errorMessage, options
+         );
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
-    qgspostgresconnection.cpp  -  PostgresSQL/PostGIS connection
+    qgspostgresconnection.cpp  -  PostgreSQL/PostGIS connection
                              -------------------
     begin                : 3 June 2011
     copyright            : (C) 2011 by Giuseppe Sucameli
@@ -102,7 +102,7 @@ QgsPostgresConnection::QgsPostgresConnection( QString theConnName ) :
     uri.setConnection( host, port, database, username, password, ( QgsDataSourceURI::SSLmode ) sslmode );
   }
   uri.setUseEstimatedMetadata( useEstimatedMetadata );
-  mConnectionInfo = uri.connectionInfo();
+  mConnectionInfo = uri.uri();
 
   QgsDebugMsg( QString( "Connection info: '%1'." ).arg( mConnectionInfo ) );
 }

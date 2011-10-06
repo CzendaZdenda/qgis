@@ -23,7 +23,8 @@ def name():
     return "Processing Framework Manager"
 
 def description():
-    return "Lists available modules sorted by tag in a panel."
+    return """Lists available modules sorted by tag in a panel.\n
+    http://polymeris.github.com/qgis/"""
     
 def icon():
     import processing_rc

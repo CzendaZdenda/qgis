@@ -25,7 +25,8 @@ def name():
     return "SAGA Module interface"
 
 def description():
-    return "Run the versatile SAGA modules. SAGA must be installed"
+    return """Run the versatile SAGA modules. SAGA must be installed
+    http://polymeris.github.com/qgis/"""
     
 def icon():
     return "saga.png"

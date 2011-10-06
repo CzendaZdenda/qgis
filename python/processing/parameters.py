@@ -84,7 +84,7 @@ class Parameter:
     def userLevel(self):
         """ See Parameter.UserLevel class.
         """
-        return UserLevel.basic
+        return Parameter.UserLevel.basic
     def setMandatory(self, mandatory):
         self._mandatory = mandatory
     def isMandatory(self):

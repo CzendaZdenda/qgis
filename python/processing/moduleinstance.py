@@ -66,7 +66,7 @@ class ModuleInstance(QtCore.QObject):
     def setState(self, state):
         self[self.stateParameter] = state
     def __getitem__(self, key):
-        return self._parameters[key]
+        return self.parameters()[key]
     def __setitem__(self, key, value):
         validator = key.validator()
         #if validator is not None:

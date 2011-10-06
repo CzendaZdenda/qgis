@@ -90,10 +90,11 @@ class Dialog(QDialog, Ui_runDialog):
                 continue
             if param.isMandatory():
                 self.mandatoryForm.addRow(label, widget)
-            elif param.userLevel() == Parameter.UserLevel.basic:
+                continue
+            if param.userLevel() == Parameter.UserLevel.basic:
                 self.optionalForm.addRow(label, widget)
-            else:
-                self.advancedForm.addRow(label, widget)
+                continue
+            self.advancedForm.addRow(label, widget)
         if not self.mandatoryForm.rowCount():
             self.mandatoryTab.hide()
         if not (self.optionalForm.rowCount() +

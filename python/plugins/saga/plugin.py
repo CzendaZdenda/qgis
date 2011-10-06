@@ -86,7 +86,7 @@ class SAGAPlugin:
                 except InvalidLibrary:
                     pass
             if self.libraries:
-                keepSeaching = False
+                keepSearching = False
             else:
                 userPath, keepSearching = QInputDialog.getText(
                     self.window,

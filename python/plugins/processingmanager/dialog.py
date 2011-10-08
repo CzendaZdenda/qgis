@@ -188,6 +188,7 @@ class Dialog(QDialog, Ui_runDialog):
         self.moduleinstance.setState(StateParameter.State.running)
     def onFeedbackChange(self, fb):
         self.statusBar.showMessage(fb)
+        self.logText.append("%s<br/>" % fb)
     def onStateChange(self, state):
         if state == StateParameter.State.running:
             #self.execButton.setEnabled(False)

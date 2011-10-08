@@ -42,6 +42,7 @@ class ModuleInstance(QtCore.QObject):
         self.setValue = self.__setitem__
         self.stateParameter = StateParameter()
         self.feedbackParameter = FeedbackParameter()
+        self.progressParameter = FeedbackParameter("Progress", int)
     def module(self):
         return self._module
     def parameters(self):
@@ -51,16 +52,18 @@ class ModuleInstance(QtCore.QObject):
             p = [(p, p.defaultValue()) for p in
                 self.module().parameters()]
             p += [(self.stateParameter, StateParameter.State.stopped),
-                (self.feedbackParameter, None)]
+                (self.feedbackParameter, None),
+                (self.progressParameter, None)]
             self._parameters = dict(p)
         return self._parameters
     def feedback(self):
         return self[self.feedbackParameter]
-    def setFeedback(self, fb, critical = False):
+    def setFeedback(self, fb = None, critical = False, progress = None):
         if fb != self.feedback():
             self[self.feedbackParameter] = fb
         if critical:
             self.setState(StateParameter.State.stopped)
+        self[self.progressParameter] = progress
     def state(self):
         return self[self.stateParameter]
     def setState(self, state):

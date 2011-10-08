@@ -42,6 +42,7 @@ class Dialog(QDialog, Ui_runDialog):
         
         self.moduleinstance = module.instance()
         self.setupUi(self)
+        
         self.setWindowTitle(self.windowTitle() + " - " + module.name())
         self._fillTextTab(module)
         self.execButton = QPushButton(self.tr("&Execute"));
@@ -49,6 +50,10 @@ class Dialog(QDialog, Ui_runDialog):
         self.buttons.addButton(self.execButton, QDialogButtonBox.ActionRole);
         self.rebuildDialog()
         self.advancedScroll.hide()
+        self.progressBar = QProgressBar()
+        self.statusBar.addPermanentWidget(self.progressBar)
+        self.progressBar.hide()
+        
         # Rebuild the dialog if parameter structure changes.
         QObject.connect(self.moduleinstance,
             self.moduleinstance.valueChangedSignal(),
@@ -56,6 +61,9 @@ class Dialog(QDialog, Ui_runDialog):
         QObject.connect(self.moduleinstance,
             self.moduleinstance.valueChangedSignal(self.moduleinstance.feedbackParameter),
             self.onFeedbackChange)
+        QObject.connect(self.moduleinstance,
+            self.moduleinstance.valueChangedSignal(self.moduleinstance.progressParameter),
+            self.onProgressChange)
         QObject.connect(self.moduleinstance,
             self.moduleinstance.valueChangedSignal(self.moduleinstance.stateParameter),
             self.onStateChange)
@@ -189,6 +197,12 @@ class Dialog(QDialog, Ui_runDialog):
     def onFeedbackChange(self, fb):
         self.statusBar.showMessage(fb)
         self.logText.append("%s<br/>" % fb)
+    def onProgressChange(self, p):
+        if p is None:
+            self.progressBar.hide()
+        else:
+            self.progressBar.show()
+            self.progressBar.setValue(p)
     def onStateChange(self, state):
         if state == StateParameter.State.running:
             #self.execButton.setEnabled(False)

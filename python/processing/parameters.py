@@ -148,8 +148,8 @@ class FeedbackParameter(Parameter):
     """ This parameter passes feedback to the user: be it messages,
     status indicators, errors, etc.
     """
-    def __init__(self):
-        Parameter.__init__(self, "Feedback", str,
+    def __init__(self, name = "Feedback", pType = str):
+        Parameter.__init__(self, name, pType,
             role = Parameter.Role.feedback)
 
 class NumericParameter(Parameter):

@@ -341,12 +341,15 @@ class ModuleInstance(processing.ModuleInstance):
                     msg = "Sorry. Only local raster layers supported."
                     self.setFeedback(msg, critical = True)
                     return
-                self.setFeedback("Converting raster to SAGA format...")
+                self.setFeedback("Converting raster to SAGA format...", progress = 0)
                 # convert input to saga grid file -- adapted from
                 # GDAL tutorial
                 driver = gdal.GetDriverByName("SAGA")
+                self.setFeedback("Converting raster to SAGA format...", progress = 25)
                 source = gdal.Open(dpUri)
+                self.setFeedback("Converting raster to SAGA format...", progress = 50)
                 destination = driver.CreateCopy(qgisFn, source, 0 )
+                self.setFeedback("Converting raster to SAGA format...", progress = 100)
                 # Once we're done, close properly the dataset
                 source = None
                 destination = None

@@ -27,6 +27,8 @@ from sys import float_info
 from osgeo import gdal
 
 import os
+import tempfile
+
 import processing
 from processing.parameters import *
 from processingmanager.dialog import RangeBox
@@ -68,7 +70,7 @@ def qgisTempFilename(basename, extension):
     return os.path.join(dir, basename + "." + extension)
     
 def sagaTempFilename(basename, extension):
-    return CSG_String(qgisTempFilename(basename, extension))
+    return saga.CSG_String(qgisTempFilename(basename, extension))
 
 class SAGAPlugin:
     def __init__(self, iface):

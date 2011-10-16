@@ -22,7 +22,6 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
-from sys import float_info
 
 from osgeo import gdal
 
@@ -216,14 +215,22 @@ class Module(processing.Module):
             
             elif pc == NumericParameter:
                 vp = sagaParam.asValue()
+                try:
+                    from sys import float_info
+                    fMin = float_info.min
+                    fMax = float_info.max
+                except ImportError:
+                    # workaround for py < 2.6
+                    fMin = 10**-38
+                    fMax = 10**38
                 if vp.has_Minimum():
                     bottom = vp.Get_Minimum()
                 else:
-                    bottom = float_info.min
+                    bottom = fMin
                 if vp.has_Maximum():
                     top = vp.Get_Maximum()
                 else:
-                    top = float_info.max
+                    top = fMax
                 val = QDoubleValidator(None)
                 val.setRange(bottom, top)
                 qgisParam.setValidator(val)

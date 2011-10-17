@@ -21,7 +21,6 @@
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import QObject, SIGNAL
-from sys import float_info
 
 from ui_dialog import Ui_runDialog
 import processing
@@ -263,8 +262,16 @@ class RangeBox(QHBoxLayout):
         QHBoxLayout.__init__(self, parent)
         self.lowBox = QDoubleSpinBox(parent)
         self.highBox = QDoubleSpinBox(parent)
-        self.lowBox.setMinimum(float_info.min)
-        self.highBox.setMaximum(float_info.max)
+        try:
+            from sys import float_info
+            fMin = float_info.min
+            fMax = float_info.max
+        except ImportError:
+            # workaround for py < 2.6
+            fMin = 10**-38
+            fMax = 10**38
+        self.lowBox.setMinimum(fMin)
+        self.highBox.setMaximum(fMax)
         self.addWidget(self.lowBox)
         self.addWidget(self.highBox)
         if values:

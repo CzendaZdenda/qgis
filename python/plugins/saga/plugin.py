@@ -93,6 +93,7 @@ class SAGAPlugin:
                     self.window,
                     self.window.tr("SAGA modules not found."),
                     self.window.tr("Please enter path to SAGA libraries:"));
+                userPath = str(userPath)
     def unload(self):
         for l in self.libraries:
             processing.framework.unregisterModuleProvider(l)

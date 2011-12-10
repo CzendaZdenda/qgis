@@ -33,59 +33,61 @@ class Panel(QDockWidget, Ui_dock):
         self.setupUi(self)
         tags = list(processing.framework.usedTags())
         tags.sort()
+
+        # QStandardItemModel
+        self.model = QStandardItemModel(self)
+	self.proxyModel = QSortFilterProxyModel()
+	self.proxyModel.setSourceModel(self.model)
+        self.moduleList.setModel(self.proxyModel)
+
+        self.moduleList.header().setVisible(False)
         self.buildModuleList(tags)
-    	QObject.connect(self.moduleList,
-			SIGNAL("itemActivated(QTreeWidgetItem *, int)"),
-			self.onItemActivated)
-        QObject.connect(self.filterBox,
-            SIGNAL("editTextChanged(QString)"),
-            self.onFilterTextChanged)
         self.setFloating(False)
         self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
-    ## The TreeWidget's items:
-    class TagItem(QTreeWidgetItem):
-        """ First hierarchical level: order by tags """
-        def __init__(self, parent, tag = "other"):
-            QTreeWidgetItem.__init__(self, parent, [tag])
-    class ModuleItem(QTreeWidgetItem):
-        """ Second hierarchical level: modules by name """
-        def __init__(self, module):
-            QTreeWidgetItem.__init__(self,[module.name()])
-            self._module = module
-        def module(self):
-            return self._module
-    def buildModuleList(self, tags):
-        """ Construct the tree of modules. """
-        topNode = self.moduleList
-        topNode.clear()
-        # a set of modules not yet added to the list
-        pending = set(processing.framework.modules())
-        # add a node for each tag
-        for tag in tags:
-            tagNode = Panel.TagItem(topNode, tag)
-            # and its children
-            #, sorted alphabetically
-            modules = sorted(processing.framework.modulesByTag(tag),
-                key=lambda x: x.name())
-            for mod in modules:
-                modNode = Panel.ModuleItem(mod)
-                tagNode.addChild(modNode)
-                pending.discard(mod)
-        # add non-tagged modules
-        tagNode = Panel.TagItem(topNode)
-        for mod in sorted(pending, key=lambda x: x.name()):
-            modNode = Panel.ModuleItem(mod)
-            tagNode.addChild(modNode)
-    def onItemActivated(self, item, _):
-        """ This slot pops up the relevant dialog. """
-        if type(item) is Panel.ModuleItem:
-            dialog = Dialog(self._iface, item.module())
-            self._dialogs.append(dialog)
-            dialog.show()
+
+        self.connect(self.moduleList, 
+                     SIGNAL("activated(QModelIndex)"), 
+                     self.activated)
+
+        self.connect(self.filterBox,
+                     SIGNAL("editTextChanged(QString)"),
+                     self.onFilterTextChanged)
+
     def onFilterTextChanged(self, string):
-        # TODO: this will be converted to a proper filter when MVC
-        # is finally implemented
-        items = self.moduleList.findItems(string,
-            Qt.MatchContains)
-        if items:
-            self.moduleList.setCurrentItem(items[0])
+        # TODO: use custom proxy model for
+        # better filtering
+	self.proxyModel.setFilterRegExp(string)
+
+    def activated(self, index):
+        if not (index.parent().data().toString().isEmpty()):	    
+            module = self.moduleList.model().data(index,Qt.UserRole+1).toPyObject()
+            dialog = Dialog(self._iface, module) 
+            dialog.show()
+        else:
+            pass		
+
+
+    ## The TreeWidget's items:
+    def buildModuleList(self, tags):
+        pending = set(processing.framework.modules())
+        
+        for tag in tags:
+                branch = QStandardItem(tag)
+                modules = sorted(processing.framework.modulesByTag(tag), key=lambda x: x.name())
+                for mod in modules:
+                        leaf = QStandardItem(mod.name())
+                        leaf.setData(mod)
+                        leaf.setEditable(False)
+                        branch.appendRow(leaf)
+                        pending.discard(mod)
+                branch.setEditable(False)
+		branch.setSelectable(False)
+                self.model.appendRow(branch)
+        
+        branch = QStandardItem("other")
+        for mod in sorted(pending, key=lambda x: x.name()):
+                leaf = QStandardItem(mod.name())
+                leaf.setData(mod)
+                branch.appendRow(leaf)
+                pending.discard(mod)
+        self.model.appendRow(branch)

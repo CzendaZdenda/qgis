@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>dock</class>
  <widget class="QDockWidget" name="dock">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>256</width>
+    <height>308</height>
+   </rect>
+  </property>
   <property name="floating">
    <bool>false</bool>
   </property>
@@ -24,19 +32,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QTreeWidget" name="moduleList">
-      <attribute name="headerVisible">
-       <bool>false</bool>
-      </attribute>
-      <attribute name="headerVisible">
-       <bool>false</bool>
-      </attribute>
-      <column>
-       <property name="text">
-        <string>Module</string>
-       </property>
-      </column>
-     </widget>
+     <widget class="QTreeView" name="moduleList"/>
     </item>
    </layout>
   </widget>

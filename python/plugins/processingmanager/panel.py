@@ -25,6 +25,37 @@ from dialog import Dialog
 from ui_panel import Ui_dock
 import processing
 
+class ProxyModel(QSortFilterProxyModel):
+    '''
+    Custom proxy model for useful filtering.
+    '''
+    def filterAcceptsRow(self, source_row, source_parent ): 
+        index = self.sourceModel().index(source_row,  0,  source_parent)
+        return self.hasToBeDisplayed(index)
+        
+    def hasToBeDisplayed(self, index):
+        result = False
+        # how many child element has
+        if ( self.sourceModel().rowCount(index) > 0 ):
+            ii = 0
+            while ( ii < self.sourceModel().rowCount(index) ):
+                childIndex = self.sourceModel().index(ii, 0, index)
+                if (not childIndex.isValid()):
+                    break
+                result = self.hasToBeDisplayed(childIndex)
+                if ( result ):
+                    break
+                ii +=1
+        else:
+            useIndex = self.sourceModel().index(index.row(), 0, index.parent())
+            type = self.sourceModel().data(useIndex, Qt.DisplayRole).toString()
+            if ( not type.contains(self.filterRegExp()) ):
+                result = False
+            else:
+                result = True
+
+        return result
+    
 class Panel(QDockWidget, Ui_dock):
     def __init__(self, iface):
         QDockWidget.__init__(self, iface.mainWindow())
@@ -34,29 +65,38 @@ class Panel(QDockWidget, Ui_dock):
         tags = list(processing.framework.usedTags())
         tags.sort()
 
-        # QStandardItemModel
+        # use custom ProxyModel based on QSortFilterProxyModel
         self.model = QStandardItemModel(self)
-	self.proxyModel = QSortFilterProxyModel()
-	self.proxyModel.setSourceModel(self.model)
+        self.proxyModel = ProxyModel()
+        self.proxyModel.setSourceModel(self.model)
+        self.proxyModel.setFilterCaseSensitivity(0)
+        self.proxyModel.setDynamicSortFilter(True)
         self.moduleList.setModel(self.proxyModel)
 
+        # header is not nessery to visible
         self.moduleList.header().setVisible(False)
+        # build list of modules and sort by tag
         self.buildModuleList(tags)
+        
         self.setFloating(False)
         self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
 
+        ## connects
+        # if we activated some model from a list/tree
         self.connect(self.moduleList, 
                      SIGNAL("activated(QModelIndex)"), 
                      self.activated)
-
+        # change offer during searching the module
         self.connect(self.filterBox,
                      SIGNAL("editTextChanged(QString)"),
                      self.onFilterTextChanged)
 
     def onFilterTextChanged(self, string):
-        # TODO: use custom proxy model for
-        # better filtering
-	self.proxyModel.setFilterRegExp(string)
+        self.proxyModel.setFilterRegExp(string)
+        self.moduleList.expandAll()	
+        if string.isEmpty():
+            self.moduleList.collapseAll()
+        #self.moduleList.keyboardSearch(string)
 
     def activated(self, index):
         if not (index.parent().data().toString().isEmpty()):	    
@@ -69,6 +109,9 @@ class Panel(QDockWidget, Ui_dock):
 
     ## The TreeWidget's items:
     def buildModuleList(self, tags):
+
+        parentItem = self.model.invisibleRootItem()
+        # a set of modules not yet added to the list
         pending = set(processing.framework.modules())
         
         for tag in tags:
@@ -81,8 +124,8 @@ class Panel(QDockWidget, Ui_dock):
                         branch.appendRow(leaf)
                         pending.discard(mod)
                 branch.setEditable(False)
-		branch.setSelectable(False)
-                self.model.appendRow(branch)
+                branch.setSelectable(False)
+                parentItem.appendRow(branch)
         
         branch = QStandardItem("other")
         for mod in sorted(pending, key=lambda x: x.name()):
@@ -90,4 +133,3 @@ class Panel(QDockWidget, Ui_dock):
                 leaf.setData(mod)
                 branch.appendRow(leaf)
                 pending.discard(mod)
-        self.model.appendRow(branch)

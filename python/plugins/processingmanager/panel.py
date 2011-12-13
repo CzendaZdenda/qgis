@@ -20,7 +20,7 @@
 #   MA 02110-1301, USA.
 
 from PyQt4.QtGui import *
-from PyQt4.QtCore import QObject, SIGNAL, Qt
+from PyQt4.QtCore import QObject, SIGNAL, Qt,  QString
 from dialog import Dialog
 from ui_panel import Ui_dock
 import processing
@@ -29,31 +29,27 @@ class ProxyModel(QSortFilterProxyModel):
     '''
     Custom proxy model for useful filtering.
     '''
-    def filterAcceptsRow(self, source_row, source_parent ): 
-        index = self.sourceModel().index(source_row,  0,  source_parent)
-        return self.hasToBeDisplayed(index)
-        
-    def hasToBeDisplayed(self, index):
+    def filterAcceptsRow( self, source_row, source_parent ): 
+        '''
+        Re-implementation of QSortFilterProxyModel's' filterAcceptsRow( self, source_row, source_parent ) function.
+        It uses not only 'name' of the item, but also tags of item/modul.
+        '''
         result = False
-        # how many child element has
-        if ( self.sourceModel().rowCount(index) > 0 ):
-            ii = 0
-            while ( ii < self.sourceModel().rowCount(index) ):
-                childIndex = self.sourceModel().index(ii, 0, index)
-                if (not childIndex.isValid()):
-                    break
-                result = self.hasToBeDisplayed(childIndex)
-                if ( result ):
-                    break
-                ii +=1
-        else:
-            useIndex = self.sourceModel().index(index.row(), 0, index.parent())
-            type = self.sourceModel().data(useIndex, Qt.DisplayRole).toString()
-            if ( not type.contains(self.filterRegExp()) ):
-                result = False
-            else:
-                result = True
+        
+        useIndex = self.sourceModel().index(source_row,  0,  source_parent)
+        name = self.sourceModel().data(useIndex, Qt.DisplayRole).toString()
 
+        if ( name.contains(self.filterRegExp()) ):
+            result = True
+        else:
+            # searching in tags 
+            # TODO: searching in description?
+            mod = self.sourceModel().data(useIndex, Qt.UserRole+1).toPyObject()
+            for tag in mod.tags():
+                tag = QString(tag)
+                if ( tag.contains(self.filterRegExp()) ):
+                    result = True
+                    break
         return result
     
 class Panel(QDockWidget, Ui_dock):
@@ -65,18 +61,24 @@ class Panel(QDockWidget, Ui_dock):
         tags = list(processing.framework.usedTags())
         tags.sort()
 
-        # use custom ProxyModel based on QSortFilterProxyModel
-        self.model = QStandardItemModel(self)
+        # use custom ProxyModel based on QSortFilterProxyModel where source model is QStandardItemModel
+        self.listModel = QStandardItemModel(self)        
         self.proxyModel = ProxyModel()
-        self.proxyModel.setSourceModel(self.model)
+        self.proxyModel.setSourceModel(self.listModel)
         self.proxyModel.setFilterCaseSensitivity(0)
         self.proxyModel.setDynamicSortFilter(True)
-        self.moduleList.setModel(self.proxyModel)
-
-        # header is not nessery to visible
+        
+        # tree-based model, which is default for our view (QTreeView)
+        self.treeModel = QStandardItemModel(self)
+        self.moduleList.setModel(self.treeModel)
+        
+        # header is not necessary to visible
         self.moduleList.header().setVisible(False)
-        # build list of modules and sort by tag
-        self.buildModuleList(tags)
+        
+        # build tree of modules sorted by tag
+        self.buildModuleTree(tags)
+        # build list of modules
+        self.buildModuleList()
         
         self.setFloating(False)
         self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
@@ -92,25 +94,31 @@ class Panel(QDockWidget, Ui_dock):
                      self.onFilterTextChanged)
 
     def onFilterTextChanged(self, string):
+        '''
+        If string is not empty -> change model in treeView from tree model to list model. Then start filtering/searching.
+        '''
+        self.moduleList.setModel(self.proxyModel)
         self.proxyModel.setFilterRegExp(string)
-        self.moduleList.expandAll()	
         if string.isEmpty():
-            self.moduleList.collapseAll()
+            self.moduleList.setModel(self.treeModel)
         #self.moduleList.keyboardSearch(string)
 
     def activated(self, index):
-        if not (index.parent().data().toString().isEmpty()):	    
+        '''
+        After activated item from list, appropriate dialog will appear.
+        '''
+        if not ( index.parent().data().toString().isEmpty() ) or not ( isinstance(index.model(), QStandardItemModel) ):	    
             module = self.moduleList.model().data(index,Qt.UserRole+1).toPyObject()
             dialog = Dialog(self._iface, module) 
             dialog.show()
         else:
-            pass		
+            pass
 
-
-    ## The TreeWidget's items:
-    def buildModuleList(self, tags):
-
-        parentItem = self.model.invisibleRootItem()
+    def buildModuleTree(self, tags):
+        '''
+        Build tree model, where tags will be branches and modules leaves.
+        '''
+        parentItem = self.treeModel.invisibleRootItem()
         # a set of modules not yet added to the list
         pending = set(processing.framework.modules())
         
@@ -126,10 +134,29 @@ class Panel(QDockWidget, Ui_dock):
                 branch.setEditable(False)
                 branch.setSelectable(False)
                 parentItem.appendRow(branch)
-        
+        # if there are some modules without tags
         branch = QStandardItem("other")
         for mod in sorted(pending, key=lambda x: x.name()):
                 leaf = QStandardItem(mod.name())
                 leaf.setData(mod)
                 branch.appendRow(leaf)
                 pending.discard(mod)
+        branch.setEditable(False)
+        branch.setSelectable(False)
+        parentItem.appendRow(branch)
+
+    def buildModuleList(self):
+        '''
+        Build list model of modules. This model is used for filtering/searching.
+        '''
+        # take all available modules 
+        modules = set(processing.framework.modules())
+        
+        for mod in  modules:
+            item = QStandardItem(mod.name())
+            item.setData(mod)
+            item.setEditable(False)
+            item.setSelectable(False)
+            self.listModel.appendRow(item)
+
+        self.listModel.sort(0)

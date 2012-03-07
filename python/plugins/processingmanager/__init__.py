@@ -47,6 +47,7 @@ class ProcessingManager:
         self.panel = None
         self.settings = None
         self.aboutDialog = None
+        self.workflowBuilder = None
         
     def initGui(self):
         from PyQt4.QtCore import QObject, SIGNAL
@@ -80,7 +81,14 @@ class ProcessingManager:
             self.menu.addAction(self.settingsAction)
             QObject.connect(self.settingsAction,
                 SIGNAL("triggered()"), self.showSettings)
-            
+
+            self.workflowBuilderAction= QAction(
+                self.menu.tr("&Workflow builder", "Processing"),
+                self._iface.mainWindow())
+            self.menu.addAction(self.workflowBuilderAction)
+            QObject.connect(self.workflowBuilderAction,
+                SIGNAL("triggered()"), self.showWorkflowBuilder)
+
             self.aboutAction = QAction(
                 self.menu.tr("&About", "Processing"),
                 self._iface.mainWindow())
@@ -103,6 +111,12 @@ class ProcessingManager:
         if not self.aboutDialog:
             self.aboutDialog = AboutDialog(self._iface.mainWindow())
         self.aboutDialog.setVisible(True)
+        
+    def showWorkflowBuilder(self):
+        from workflowBuilder import WorkflowBuilder
+        if not self.workflowBuilder:
+            self.workflowBuilder = WorkflowBuilder(self._iface)
+        self.workflowBuilder.setVisible(True)
         
 def classFactory(iface):
     return ProcessingManager(iface)

@@ -139,6 +139,7 @@ class Panel(QDockWidget, Ui_dock):
         for mod in sorted(pending, key=lambda x: x.name()):
                 leaf = QStandardItem(mod.name())
                 leaf.setData(mod)
+                leaf.setEditable(True)
                 branch.appendRow(leaf)
                 pending.discard(mod)
         branch.setEditable(False)

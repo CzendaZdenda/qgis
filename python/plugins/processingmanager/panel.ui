@@ -32,11 +32,18 @@
      </widget>
     </item>
     <item>
-     <widget class="QTreeView" name="moduleList"/>
+     <widget class="QModuleTreeView" name="moduleList"/>
     </item>
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QModuleTreeView</class>
+   <extends>QTreeView</extends>
+   <header>gui</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

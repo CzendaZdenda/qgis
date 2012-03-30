@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>workflowBuilder</class>
  <widget class="QDialog" name="workflowBuilder">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>826</width>
+    <height>644</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Workflow Builder 0.01</string>
   </property>
@@ -15,7 +23,7 @@
       <widget class="QDockWidget" name="dockWidget">
        <property name="maximumSize">
         <size>
-         <width>270</width>
+         <width>350</width>
          <height>524287</height>
         </size>
        </property>
@@ -34,12 +42,15 @@
             <number>0</number>
            </property>
            <widget class="QWidget" name="ioput">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>252</width>
-              <height>356</height>
+              <width>332</width>
+              <height>400</height>
              </rect>
             </property>
             <attribute name="label">
@@ -49,32 +60,78 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>1</number>
+                <number>0</number>
                </property>
-               <widget class="QWidget" name="tab">
+               <widget class="QWidget" name="inputTab">
                 <attribute name="title">
                  <string>Input</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="verticalLayout_5">
                  <item>
-                  <widget class="QTreeView" name="treeViewIn">
-                   <property name="headerHidden">
+                  <widget class="QScrollArea" name="inputScroll">
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <property name="horizontalScrollBarPolicy">
+                    <enum>Qt::ScrollBarAlwaysOff</enum>
+                   </property>
+                   <property name="widgetResizable">
                     <bool>true</bool>
                    </property>
+                   <widget class="QWidget" name="inputWidget">
+                    <property name="geometry">
+                     <rect>
+                      <x>0</x>
+                      <y>0</y>
+                      <width>292</width>
+                      <height>331</height>
+                     </rect>
+                    </property>
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <layout class="QFormLayout" name="inputForm"/>
+                   </widget>
                   </widget>
                  </item>
                 </layout>
                </widget>
-               <widget class="QWidget" name="tab_2">
+               <widget class="QWidget" name="outputTab">
                 <attribute name="title">
                  <string>Output</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="verticalLayout_6">
                  <item>
-                  <widget class="QTreeView" name="treeViewOut">
-                   <property name="headerHidden">
+                  <widget class="QScrollArea" name="outputScroll">
+                   <property name="frameShape">
+                    <enum>QFrame::NoFrame</enum>
+                   </property>
+                   <property name="horizontalScrollBarPolicy">
+                    <enum>Qt::ScrollBarAlwaysOff</enum>
+                   </property>
+                   <property name="widgetResizable">
                     <bool>true</bool>
                    </property>
+                   <widget class="QWidget" name="outputWidget">
+                    <property name="geometry">
+                     <rect>
+                      <x>0</x>
+                      <y>0</y>
+                      <width>292</width>
+                      <height>331</height>
+                     </rect>
+                    </property>
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <layout class="QFormLayout" name="outputForm"/>
+                   </widget>
                   </widget>
                  </item>
                 </layout>
@@ -88,8 +145,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>252</width>
-              <height>356</height>
+              <width>332</width>
+              <height>400</height>
              </rect>
             </property>
             <attribute name="label">
@@ -102,6 +159,38 @@
             </layout>
            </widget>
           </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="buttonLayout">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="executeButton">
+             <property name="text">
+              <string>Execute</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="cancelButton">
+             <property name="text">
+              <string>Cancel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="saveButton">
+             <property name="text">
+              <string>Save</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="clearButton">
+             <property name="text">
+              <string>Clear</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>

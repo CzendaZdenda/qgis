@@ -5,19 +5,25 @@ import math
 import cPickle
 import pickle
 
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
+from qgis.core import *
+
 from core import PortType,  Connection,  Module,  Port
 import processingplugin
 import processing
+from processing.parameters import *
 
 # some graphics parameters...
 PORT_WIDTH = 10
 PORT_HEIGHT = 10
+MODULE_PEN = QPen( QBrush( QColor(Qt.black )), 2)
 MODULE_SELECTED_PEN = QPen( QBrush( QColor(Qt.darkYellow) ), 3 )
 MODULE_LABEL_SELECTED_PEN = QPen( QBrush( QColor(Qt.black)),  2 )
+MODULE_LABEL_PEN = QPen( QBrush( QColor(Qt.black)),  2 )
 BREAKPOINT_MODULE_BRUSH = QPen( QBrush( QColor(Qt.black)),  2 )
 MODULE_LABEL_MARGIN = (20, 20, 20, 15)
 MODULE_PORT_MARGIN = (4, 4, 4, 4)
@@ -26,13 +32,11 @@ MODULE_PORT_PADDED_SPACE = 20
 CONNECTION_PEN = QPen( QBrush( QColor(Qt.black), 2 ) )
 CONNECTION_SELECTED_PEN = QPen( QBrush( QColor(Qt.yellow ), 3 ) )
 
-class Mode(object):
-   MoveItem,  InsertLine = range(2)
-
-        
 class GraphicsView(QGraphicsView):
     '''
         QGraphicsView.
+        It accepts drags and drops.
+        It handles inserting/creating modules (Module) and key press events.
     '''
     def __init__(self,  parent = None ):
         super(GraphicsView, self).__init__(parent)
@@ -62,7 +66,7 @@ class GraphicsView(QGraphicsView):
             Accept dropped items, that were dragged from QModuleTreeList.
         """
         if (type( event.source() ) == processingplugin.ui_panel.QModuleTreeView):
-            # Get modul from QModuleTreeView.
+            # Get PF modul from QModuleTreeView.
             d = event.mimeData()
             b = d.retrieveData("application/x-pf", QVariant.ByteArray)
             pfM = pickle.loads(b.toByteArray())
@@ -71,6 +75,23 @@ class GraphicsView(QGraphicsView):
             module = event.source().model().data(index2,Qt.UserRole+1).toPyObject()        
             self.insertModule(module, event.pos())
         
+    def keyPressEvent(self, event):
+        """
+            If user press Del-key, remove module or connection from workflow if possible.
+        """
+        if event.key() == Qt.Key_Delete:
+            delItems = self.scene().selectedItems()
+            if (delItems):
+                self.scene().clearDockPanel()
+                for item in delItems:
+                    if isinstance(item, QGraphicsModuleItem):
+                        # remove module
+                        self.scene().delModule(item)
+                    elif isinstance(item, QGraphicsConnectionItem):
+                        # remove connection
+                        self.scene().delConnection(item)
+
+        self.parent().statusBar.showMessage(QString(event.text()), 2000)
     def insertModule(self, mod, pos):
         '''
             Insert module into the scene.
@@ -94,15 +115,19 @@ class GraphicsView(QGraphicsView):
             
             tmpPort = None
             if i.isMandatory():
-                tmpPort = Port(PType,  i.type(),  module.id, i.name())
+                tmpPort = Port(i.defaultValue(), PType, i.__class__,  module.id, i.name())
             else:
-                tmpPort = Port(PType,  i.type(),  module.id, i.name(),  True)
+                tmpPort = Port(i.defaultValue(), PType, i.__class__,  module.id, i.name(), True)
+            if i.__class__ == ChoiceParameter:
+                tmpPort.setData(i.choices())
             tmpPort.description = i.description()
+            tmpPort.parameterInstance = i
+            
             module.addPort(tmpPort)
             
         # add Module into DiagramScene
         self.scene().addModule(module, pos)
-        
+    
 class DiagramScene(QGraphicsScene):
     '''
         QGraphicsScene.
@@ -150,9 +175,7 @@ class DiagramScene(QGraphicsScene):
         dstModule = self.modules[connection.destination.moduleId]
         srcPoint = srcModule.getOutputPortPosition(connection.source)
         dstPoint = dstModule.getInputPortPosition(connection.destination)
-        connectionItem = QGraphicsConnectionItem(srcPoint, dstPoint,
-                                                 srcModule, dstModule,
-                                                 connection)
+        connectionItem = QGraphicsConnectionItem(srcPoint, dstPoint, srcModule, dstModule, connection)
         connectionItem.id = connection.id
         connectionItem.connection = connection
         self.addItem(connectionItem)
@@ -166,6 +189,7 @@ class DiagramScene(QGraphicsScene):
         '''
             If user clicks on a port/parameter, we make the curve, that connects this port with another.
         '''
+        self.clearDockPanel()
         QGraphicsScene.mousePressEvent(self, mouseEvent)
         if mouseEvent.button() == Qt.LeftButton:            
             self.justClick = True
@@ -191,12 +215,7 @@ class DiagramScene(QGraphicsScene):
                 show parameters of Module
                 show parameters of Port
                 finish connection
-        """
-        # clear information previous about module's ports and module/port's description
-        self.parent().modelInput.clear()
-        self.parent().modelOutput.clear()
-        self.parent().textEditDesc.clear()
-        
+        """        
         QGraphicsScene.mouseReleaseEvent(self, mouseEvent)
         if mouseEvent.button() == Qt.LeftButton:
             
@@ -241,7 +260,8 @@ class DiagramScene(QGraphicsScene):
                             con = Connection(startPort, endPort, startModule,  endModule)
                             self.addConnection(con)
                             
-                            startPort.setEmpty(False)
+                            # start port could be source for more then one destination/end port, but destination have to have just one input
+                            #startPort.setEmpty(False)
                             endPort.setEmpty(False)
                             
                 if self.line:
@@ -266,31 +286,255 @@ class DiagramScene(QGraphicsScene):
                             tmpModule = i
                             
                     if (tmpPort):
+                        '''
+                            Give information about port.
+                        '''
                         port = tmpPort.port
-                        self.parent().item.setText(QString("Port - {0}".format(port.name)))
-                        self.parent().textEditDesc.setText(QString("{1} --> {0}".format(port.description, port.type)))
+                        self.parent().item.setText(QString("Port - %s" % (port.name) ))
+                        self.parent().textEditDesc.setText(QString("{1} --> {0}, {2}".format(port.description, port.type, port.getValue())))
+                        self.parent().toolBox.setCurrentIndex(1)
+                        self.parent().toolBox.setCurrentIndex(1)
+                        self.parent().toolBox.setItemEnabled(0, False)
 
                     elif (tmpModule):
+                        """
+                            Give information about module.
+                        """
                         module = tmpModule.module
                         #TODO: look at models from MVC
-                        self.parent().item.setText(QString("Module - {0}".format(module.label)))
+                        self.parent().item.setText(QString("Module - %s" % (module.label)))
                         self.parent().textEditDesc.setText(module.description)
+                        self.parent().toolBox.setCurrentIndex(0)
+                        self.parent().toolBox.setItemEnabled(0, True)
                         for port in module.ports:
-                            item = QStandardItem(QString("{0}({1})".format(port.name,  port.type)))
-                            item.setData(port)
-                            item.setEditable(False)
-                            item.setSelectable(True)
+                            widget = self.widgetByPort(port)
                             if port.portType is PortType.Destination:                                
-                                self.parent().modelInput.appendRow(item)
+                                self.parent().inputForm.addRow(widget)
                             elif port.portType is PortType.Source:
-                                self.parent().modelOutput.appendRow(item)
-                        self.parent().treeViewIn.resizeColumnToContents(0)
-                        self.parent().treeViewOut.resizeColumnToContents(0)
+                                self.parent().outputForm.addRow(widget)
 
             self.justClick = False
 
-  
-    
+    def widgetByPort(self, port):
+        #TODO: comments
+        widget = QWidget(None)
+        wVLayout = QVBoxLayout(widget)
+        wHLayout = QHBoxLayout()
+        
+        # add name to layout
+        label = QLabel(QString("{0}".format(port.name)))
+        wVLayout.addWidget(label)
+        
+        # set first checkbox according port is empty or not; if is it available
+        checkIsEmpty= QCheckBox()
+        checkIsEmpty.setEnabled(False)
+        if port.isEmpty():
+            checkIsEmpty.setChecked(True)
+        else:
+            checkIsEmpty.setChecked(False)        
+        
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(checkIsEmpty.sizePolicy().hasHeightForWidth())
+        checkIsEmpty.setSizePolicy(sizePolicy)
+        checkIsEmpty.setTristate(False)
+        # set second checkbox according port is mandatory or not
+        checkIsMandatory= QCheckBox()
+        checkIsMandatory.setEnabled(False)
+        if port.optional:
+            checkIsMandatory.setChecked(False)
+        else:
+            checkIsMandatory.setChecked(True)
+        sizePolicy.setHeightForWidth(checkIsMandatory.sizePolicy().hasHeightForWidth())
+        checkIsMandatory.setSizePolicy(sizePolicy)
+        checkIsMandatory.setTristate(False)
+            
+        # add checkBoxes to layout
+        wHLayout.addWidget(checkIsEmpty)
+        wHLayout.addWidget(checkIsMandatory)
+
+        pc = port.type
+        value = port.getValue()
+        w = None
+        if pc == processing.parameters.StateParameter:
+            pass
+        if pc == processing.parameters.FeedbackParameter:
+            pass
+        if pc == processing.parameters.NumericParameter:
+            w = QDoubleSpinBox(None)
+            w.setValue(value)
+            QObject.connect(w,  SIGNAL("valueChanged(double)"), lambda v: port.setValue(v))
+        if pc == processing.parameters.RangeParameter:
+            w = RangeBox(None)
+            w.setValue(value)
+            QObject.connect(w,  SIGNAL("valueChanged"), lambda v: port.setValue(v))
+        if pc == processing.parameters.BooleanParameter:
+            w = QCheckBox(None)
+            w.setChecked(value)
+            QObject.connect(w,  SIGNAL("toggled(bool)"), lambda v: port.setValue(v))
+
+        if pc == processing.parameters.ChoiceParameter:
+            w = QComboBox(None)
+            w.addItems(port.getData())
+            w.setCurrentIndex(value)
+            QObject.connect(w,  SIGNAL("currentIndexChanged(int)"), lambda v: port.setValue(v))
+
+        if pc == processing.parameters.PathParameter:
+            w = FileSelector()
+            if value:
+                w.setPath(value)
+            QObject.connect(w.lineEdit,  SIGNAL("textChanged(QString)"), lambda v: port.setValue(v))
+        if (pc == processing.parameters.LayerParameter or
+            pc == processing.parameters.VectorLayerParameter or
+            pc == processing.parameters.RasterLayerParameter):
+            layerRegistry = QgsMapLayerRegistry.instance()
+            self.mapLayers = layerRegistry.mapLayers().values()
+            self.vectorLayers = filter( lambda x: x.type() == QgsMapLayer.VectorLayer, self.mapLayers)
+            self.rasterLayers = filter( lambda x: x.type() == QgsMapLayer.RasterLayer, self.mapLayers)               
+            if pc == processing.parameters.LayerParameter:
+                layers = self.mapLayers
+            if pc == processing.parameters.VectorLayerParameter:
+                layers = self.vectorLayers
+            if pc == processing.parameters.RasterLayerParameter:
+                layers = self.rasterLayers
+                
+            w = LayerComboBox(layers)
+            if value:
+                w.setCurrentLayer(value)
+                
+            QObject.connect(w,  SIGNAL("currentLayerChanged"), lambda v: port.setValue(v))
+        if w is None: # default case
+            w = QLineEdit(str(value), None)
+            QObject.connect(w,  SIGNAL("textChanged(QString)"), lambda v: port.setValue(v))
+
+        if w.isWidgetType():
+            wHLayout.addWidget(w)
+        else:
+            wVLayout.addLayout(w)
+        wVLayout.addLayout(wHLayout)
+        
+        return widget
+        
+    def clearDockPanel(self):
+        for w in self.parent().inputWidget.children():
+            if w.isWidgetType():
+                w.setParent(None)
+                del(w)
+        for w in self.parent().outputWidget.children():
+            if w.isWidgetType():
+                w.setParent(None)
+                del(w)
+        self.parent().item.setText(QString("Item"))
+        self.parent().textEditDesc.clear()
+    def delModule(self, item):
+        """
+            Remove module from scene. Also remove conenction and clean after that.
+        """
+        for con in item.dependingConnectionItems():         
+            con[0].delConnectionItem(con)
+            self.removeItem(con[0])
+            for i, n in self.connections.iteritems():
+                if n == con:
+                    del self.connections[i]
+                    break
+        
+        self.removeItem(item)
+        del self.modules[item.module.id] 
+
+    def delConnection(self, con):
+        con.delConnectionItem(con)
+        self.removeItem(con)
+        for i, n in self.connections.iteritems():
+            if n == con:
+                del self.connections[i]
+                break
+
+
+class FileSelector(QHBoxLayout):
+    def __init__(self, path = None, parent = None):
+        QHBoxLayout.__init__(self, parent)
+        self.lineEdit = QLineEdit(parent)
+        self.button = QPushButton(self.tr("Browse..."), parent)
+        QObject.connect(self.button, SIGNAL("clicked()"), self.onButtonClicked)
+        self.addWidget(self.lineEdit)
+        self.addWidget(self.button)
+    def onButtonClicked(self):
+        self.setPath(QFileDialog.getOpenFileName(self.button))
+    def setPath(self, path):
+        self.lineEdit.setText(path)
+    def path(self):
+        return self.lineEdit.text()
+
+class LayerComboBox(QComboBox):
+    def __init__(self, layers, parent = None):
+        QComboBox.__init__(self, parent)
+        self.setLayers(layers)
+        self.connect(self, SIGNAL("currentIndexChanged(int)"), self.onCurrentIndexChanged)
+    def setLayers(self, layers):
+        self.layers = list(layers)
+        self.layers.insert(0, None)
+        layerNames = list()
+        for l in self.layers:
+            if not l:
+                layerNames.append(self.tr("- none selected -"))
+            else:
+                layerNames.append(l.name())
+        self.clear()
+        self.addItems(layerNames)
+    def currentLayer(self):
+        return self.layers[self.currentIndex()]
+    def setCurrentLayer(self, layer):
+        try:
+            ix = self.layers.index(layer)
+        except:
+            self.layers.append(layer)
+            self.setLayers(self.layers)
+            ix = self.layers.index(layer)
+        self.setCurrentIndex(ix)
+    def onCurrentIndexChanged(self, ix):
+        self.emit(SIGNAL("currentLayerChanged"), self.layers[ix])
+
+class RangeBox(QHBoxLayout):
+    def __init__(self, values = None, parent = None):
+        QHBoxLayout.__init__(self, parent)
+        self.lowBox = QDoubleSpinBox(parent)
+        self.highBox = QDoubleSpinBox(parent)
+        try:
+            from sys import float_info
+            fMin = float_info.min
+            fMax = float_info.max
+        except ImportError:
+            # workaround for py < 2.6
+            fMin = 10**-38
+            fMax = 10**38
+        self.lowBox.setMinimum(fMin)
+        self.highBox.setMaximum(fMax)
+        self.addWidget(self.lowBox)
+        self.addWidget(self.highBox)
+        if values:
+            self.setValue(values)
+        QObject.connect(self.lowBox, SIGNAL("valueChanged(double)"), self.onLowValueChanged)
+        QObject.connect(self.highBox, SIGNAL("valueChanged(double)"), self.onHighValueChanged)
+        
+    def setValue(self, values):
+        low, high = sorted(values)
+        self.lowBox.setValue(low)
+        self.highBox.setValue(high)
+        self.lowBox.setMaximum(high)
+        self.highBox.setMinimum(low)
+    def value(self):
+        low = self.lowBox.value()
+        high = self.highBox.value()
+        return (low, high)
+    def onLowValueChanged(self, value):
+        self.highBox.setMinimum(value)
+        self.emit(SIGNAL("valueChanged"), self.value())
+    def onHighValueChanged(self, value):
+        self.lowBox.setMaximum(value)
+        self.emit(SIGNAL("valueChanged"), self.value())
+
+
 class QGraphicsPortItem(QGraphicsRectItem):
     '''
         Port - input/output of the module.
@@ -298,7 +542,6 @@ class QGraphicsPortItem(QGraphicsRectItem):
     def __init__(self, x, y, parent = None,  optional = False):
         _rect = QRectF(0, 0, PORT_WIDTH, PORT_HEIGHT)
         QGraphicsRectItem.__init__(self,  _rect.translated(x, y), parent)
-        # super(QGraphicsPortItem,  self).__init__(_rect.translated(x, y), parent)
         self.setZValue(1)
         self.setFlags(QGraphicsItem.ItemIsSelectable)
         
@@ -335,7 +578,6 @@ class QGraphicsPortItem(QGraphicsRectItem):
         QGraphicsRectItem.paint(self, painter, option, widget)
 
 class QGraphicsModuleItem(QGraphicsItem):
-    
     def __init__(self, parent=None, scene=None):
         """ QGraphicsModuleItem(parent: QGraphicsItem, scene: QGraphicsScene)
                                 -> QGraphicsModuleItem
@@ -343,13 +585,12 @@ class QGraphicsModuleItem(QGraphicsItem):
         
         """
         QGraphicsItem.__init__(self, parent, scene)
-        # TODO: rect
         self.paddedRect = QRectF(0, 0, 100, 60)
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable | QGraphicsItem.ItemSendsGeometryChanges)
         self.setZValue(0)
-        self.labelFont = QFont("Arial", 14, QFont.Bold)
+        self.labelFont = QFont("Arial", 12, QFont.Bold)
         self.labelFontMetric = QFontMetrics(self.labelFont)
-        self.descFont = QFont("Arial", 12)
+        self.descFont = QFont("Arial", 10)
         self.descFontMetric = QFontMetrics(self.descFont)
         self.modulePen = QPen( QBrush( Qt.black ) , 2 )
         self.moduleBrush = QBrush(Qt.lightGray)
@@ -380,7 +621,22 @@ class QGraphicsModuleItem(QGraphicsItem):
         self.connections = []
         
     def addConnection(self, con, tf):
+        """
+            con: Connection
+            tf: bool
+        """
         self.connections.append((con, tf))
+
+    def delConnection(self, con):
+        for connection in self.connections:
+            if isinstance(con, tuple):
+                if connection[0] == con[0]:
+                    self.connections.pop(self.connections.index(connection))
+                    break
+            elif isinstance(con, QGraphicsConnectionItem):
+                if connection[0] == con:
+                    self.connections.pop(self.connections.index(connection))
+                    break
 
     def boundingRect(self):
         try:
@@ -445,7 +701,14 @@ class QGraphicsModuleItem(QGraphicsItem):
         """ paint(painter: QPainter, option: QStyleOptionGraphicsItem,
                   widget: QWidget) -> None
         """
-           
+        # if item isSelected()
+        if self.isSelected():
+            self.modulePen = MODULE_SELECTED_PEN
+            self.labelPen = MODULE_LABEL_SELECTED_PEN
+        else:
+            self.modulePen = MODULE_PEN
+            self.labelPen = MODULE_LABEL_PEN
+            
         # draw module shape
         painter.setBrush(self.moduleBrush)
         painter.setPen(self.modulePen)
@@ -739,9 +1002,10 @@ class QGraphicsConnectionItem(QGraphicsPathItem):
     def paint(self, painter, option, widget=None):
         """ paint(painter: QPainter, option: QStyleOptionGraphicsItem,
                   widget: QWidget) -> None
-        Peform actual painting of the connection
+        Peform actual painting of the connection.
 
         """
+        # TODO: isSelected????? doesn't work as i thought
         if self.isSelected():
             painter.setPen(CONNECTION_SELECTED_PEN)
         else:
@@ -778,7 +1042,25 @@ class QGraphicsConnectionItem(QGraphicsPathItem):
                         return QVariant(False)
         self.useSelectionRules = True
         return QGraphicsPathItem.itemChange(self, change, value) 
-
+    def delConnectionItem(self, con):
+        """
+            Depends if we want remove connection from one Module or from both.
+        """
+        mod = None
+        if isinstance(con, tuple):
+            if con[1]:
+                mod = self.connectingModules[0]
+                con[0].connection.source.setEmpty(True)
+            else:
+                mod = self.connectingModules[1]
+                con[0].connection.destination.setEmpty(True)
+            mod.delConnection(con)
+        elif isinstance(con, QGraphicsConnectionItem):
+            self.connectingModules[0].delConnection(con)
+            self.connectingModules[1].delConnection(con)
+            # source should has more destinations...
+            con.connection.source.setEmpty(True)
+            con.connection.destination.setEmpty(True)
 ## Processing Framework ##
 class QModuleTreeView(QTreeView):
     """
@@ -808,3 +1090,4 @@ class QModuleTreeView(QTreeView):
         drag.setMimeData(mime)
 
         drag.start(Qt.MoveAction)
+

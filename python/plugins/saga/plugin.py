@@ -329,6 +329,10 @@ class ModuleInstance(processing.ModuleInstance):
             elif not param.layer:
                 continue
             basename = "qgis-saga%s" % id(param.layer)
+            print "in saga plugin"
+            print param.layer
+            print param.layer.dataProvider()
+            print param.layer.dataProvider().dataSourceUri()
             dpUri = str(param.layer.dataProvider().dataSourceUri())
             dpDescription = param.layer.dataProvider().description()              
             if pc == VectorLayerParameter:

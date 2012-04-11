@@ -5,3 +5,6 @@ ADD_SUBDIRECTORY(GdalTools)
 ADD_SUBDIRECTORY(osm)
 ADD_SUBDIRECTORY(processingmanager)
 ADD_SUBDIRECTORY(saga)
+ADD_SUBDIRECTORY(workflow_builder)
+ADD_SUBDIRECTORY(basicmodule)
+

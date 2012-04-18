@@ -11,6 +11,7 @@ from PyQt4.QtCore import *
 from PyQt4.Qt import *
 
 from qgis.core import *
+from qgis.utils import *
 
 from core import PortType,  Connection,  Module,  Port,  Graph
 import processingplugin
@@ -138,7 +139,6 @@ def widgetByPort(port, save=False):
         w = LayerComboBox(layers)
         if value:
             w.setCurrentLayer(value)
-        
         if (save):
             w.setEnabled(False)
         QObject.connect(w,  SIGNAL("currentLayerChanged"), lambda v: port.setValue(v))
@@ -157,6 +157,17 @@ def widgetByPort(port, save=False):
         wHLayout.addWidget( alternativeName )
         
     wVLayout.addLayout(wHLayout)
+    # if it is output layer, we can set name of layer and if we want add it to canvas
+    if port.portType == PortType.Source and (port.type == processing.parameters.VectorLayerParameter or port.type == processing.parameters.RasterLayerParameter):
+        # Add checkbox  > 
+        outputHLayout = QHBoxLayout()
+        checkAddIt = QCheckBox()
+        QObject.connect(checkAddIt, SIGNAL("toggled(bool)"), lambda v: port.setAddItToCanvas(v) )
+        newName = QLineEdit("{0}".format(port.name), None)
+        QObject.connect(newName,  SIGNAL("textChanged(QString)"), lambda v: port.setOutputName(v))
+        outputHLayout.addWidget(checkAddIt)
+        outputHLayout.addWidget(newName)
+        wVLayout.addLayout(outputHLayout)
 
     return widget
     
@@ -172,7 +183,6 @@ class SaveDialog(QDialog,  Ui_savedialog):
         QObject.connect(self.buttonBox, SIGNAL("accepted()"), self.saveWorkflow)
 
     def prepareDialog(self):
-        #TODO:  rewrite widgetByPort(Port) method
         for sub in self.graph.subgraphs.values():
             for mod in sub.getModules():
                 label = QLabel( QString("{0}".format(mod.label)) )
@@ -188,6 +198,8 @@ class SaveDialog(QDialog,  Ui_savedialog):
         self.graph.tags = str( self.lineEditTags.text() ).split( "," )
         self.graph.save()
         #TODO: after saving load it into PF Manager
+        reloadPlugin('workflow_builder')
+        reloadPlugin('processingplugin')
         
 class GraphicsView(QGraphicsView):
     '''
@@ -223,15 +235,18 @@ class GraphicsView(QGraphicsView):
             Accept dropped items, that were dragged from QModuleTreeList.
         """
         if (type( event.source() ) == processingplugin.ui_panel.QModuleTreeView):
-            # Get PF modul from QModuleTreeView.
-            d = event.mimeData()
-            b = d.retrieveData("application/x-pf", QVariant.ByteArray)
-            pfM = pickle.loads(b.toByteArray())
+            try:
+                # Get PF modul from QModuleTreeView.
+                d = event.mimeData()
+                b = d.retrieveData("application/x-pf", QVariant.ByteArray)
+                pfM = pickle.loads(b.toByteArray())
         
-            index2 = event.source().indexAt(pfM)
-            module = event.source().model().data(index2,Qt.UserRole+1).toPyObject()
-            # in scene Module and QGraphicsModuleItem will be create from PF Module
-            self.scene().addModule(module, event.pos())
+                index2 = event.source().indexAt(pfM)
+                module = event.source().model().data(index2,Qt.UserRole+1).toPyObject()
+                # in scene Module and QGraphicsModuleItem will be create from PF Module
+                self.scene().addModule(module, event.pos())
+            except:
+                pass
         
     def keyPressEvent(self, event):
         """

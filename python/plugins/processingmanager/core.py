@@ -122,16 +122,6 @@ class Graph(object):
             To execute Graph -> execute all SubGraphs -> execute all Modules in SubGraphs.
             TODO: after executing - clean outputs and connected inputs
         """
-#        # before execution set all output layers that are connected as default
-#        for mod in self.modules.values():
-#            for port in mod.getPorts():
-#                #if port.portType == PortType.Source:
-#                if port.portType == PortType.Source and port.isConneted():
-#                    print port.defaultValue
-#                    print port.parameterInstance.defaultValue()
-#                    port.setValue(port.defaultValue)
-#                    mod.getInstancePF().setValue(port.parameterInstance, port.defaultValue)        
-        
         for sub in self.subgraphs.values():
             sub.prepareToExecute()
             if sub.isValid():
@@ -146,6 +136,7 @@ class Graph(object):
                 if port.isConnected() or port.portType == PortType.Source:
                     port.setValue(port.defaultValue)
                     mod.getInstancePF().setValue(port.parameterInstance, port.defaultValue)
+                    port.setAddItToCanvas(False)
         return True
         
     def getModulesBySubGraphId(self, id):
@@ -254,7 +245,7 @@ class SubGraph(object):
         
         def setModule(mod):
             for p in mod.getPorts():
-                if not p.isSet():
+                if not p.isSet() and not p.optional:
                     if p.portType == PortType.Destination:
                         sModule = p.findSourceModule(self._connections)
                         setModule(sModule)
@@ -375,6 +366,7 @@ class Module(object):
         """
             Set Modules's Ports' Values to Parameters of instance of PFModule.
         """
+        print self.label
         if self.isSet():
             self.getInstancePF()
             for p in self.getPorts():
@@ -387,16 +379,28 @@ class Module(object):
             if self.id in self._sGraph.modules:
                 del self._sGraph.modules[self.id]
             for p in self.getPorts(PortType.Source):
-                # for now it set just set value to layer parameters/ports
-                saga = list( self._instance.module().tags () )[0] == 'saga'
+                # for now it just set value to layer parameters/ports
+                # we keep information if this is module from SAGA Plugin, because there is the bug, that module don't  keep output data properly
+                saga = "saga" in list( self._instance.module().tags () )
                 if p.type == processing.parameters.RasterLayerParameter:
+                    # to care about raster data
                     if saga:
+                        # if module is from SAGA Plugin, we have to get output data from this parameter from sagalayer attribute
                         lyr = str(p.parameterInstance.sagaLayer.Get_File_Name().split('.')[0]) + ".sdat"
                         b = QgsRasterLayer(lyr)
                     else:
                         b = self._instance[p.parameterInstance]
+                    # keep output data in this port and also it as current value
                     p.setOutputData(b)
                     p.setValue(b)
+                    # if it is possible and user wants this, add new layer to QGIS
+                    try:
+                        if p.addItToCanvas():
+                            mreg = QgsMapLayerRegistry().instance()
+                            b.setLayerName(p.outputName())
+                            mreg.addMapLayer(b)
+                    except:
+                        print "problem with add raster layer into canvas"
                 elif p.type == processing.parameters.VectorLayerParameter:
                     if saga:
                         try:
@@ -407,7 +411,13 @@ class Module(object):
                         b = self._instance[p.parameterInstance]
                     p.setOutputData(b)
                     p.setValue(b)
-                    p.getValue()
+                    try:
+                        if p.addItToCanvas():
+                            mreg = QgsMapLayerRegistry().instance()
+                            b.setLayerName(p.outputName())
+                            mreg.addMapLayer(b)
+                    except:
+                        print "problem with add vector layer into canvas"
                 else:
                     try:
                         p.setOutputData(self._instance[p.parameterInstance])
@@ -616,6 +626,20 @@ class Port(object):
         self.setIt = value
     def setAlternativeName(self, name):
         self.alternativeName = name
+    def setAddItToCanvas(self, bool = False):
+        self.addIt = bool
+    def addItToCanvas(self):
+        try:
+            return self.addIt
+        except:
+            return False
+    def setOutputName(self, name):
+        self._outputName = name
+    def outputName(self):
+        try:
+            return self._outputName
+        except:
+            return self.name
 class Connection(object):
     """
         Connection between source and destination Ports. We also keep references to source and destination Modules.

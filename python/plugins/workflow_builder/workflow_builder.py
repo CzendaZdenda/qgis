@@ -42,6 +42,7 @@ class Plugin:
     def modules(self):
         return self.mods
     def getModules(self):
+        tmpMods = []
         mods = []
         pathXML = QFileInfo( QgsApplication.qgisUserDbFilePath() ).path() + "/python/workflows"
         dir = QDir(pathXML)
@@ -49,10 +50,13 @@ class Plugin:
         for f in dir.entryInfoList():
             # take file, make Module
             try:
-                mods.append( Module(f.absoluteFilePath()) )
+                tmpMods.append( Module(f.absoluteFilePath()) )
             except:
-                print "I can't read this file: {0}".format(f.absoluteFilePath())
-                
+                print "I can't read this file: {0}".format(f.absoluteFilePath())        
+        currentModules = map(lambda mod: mod.name(),list(processing.framework.modules()))
+        for mod in tmpMods:
+            if mod.name() not in currentModules:
+                mods.append(mod)
         return mods
     def initGui(self):
         self.mods = self.getModules()

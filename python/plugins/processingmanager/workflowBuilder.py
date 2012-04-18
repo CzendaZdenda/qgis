@@ -1,3 +1,26 @@
+# -*- coding: utf-8 -*-
+
+#	 Workflow builder Plugin for Quantum GIS Processing Framework.
+#
+#	 workflowBuilder.py (C) Zdenek Ruzicka
+#	
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#       
+#   You should have received a copy of the GNU General Public License
+#   along with this program; if not, write to the Free Software
+#   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#   MA 02110-1301, USA.import os
+
+
+
 from PyQt4.QtGui import QDialog, QStandardItemModel,  QHBoxLayout
 from PyQt4.QtCore import QString, SIGNAL,  QObject
 from qgis.core import *
@@ -94,12 +117,9 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
                 
     def _onSaveButtonClicked(self):
         """
-            TODO:
-                Possibility to save Graph/Workflow as new Module in Processing Framework to (re)use it.
+                Save Graph/Workflow as new Module in Processing Framework to (re)use it.
         """
         self.statusBar.showMessage(QString("Saving..."),  2000)
-        #TODO - open dialog for where user will set which parameter should be set, name of module, description, tags, ...
-        #           - after accepting dialog, save it as new modul - as XML
         self.createGraph()
         if self.graph:
             svDialog = SaveDialog(self.graph, self)

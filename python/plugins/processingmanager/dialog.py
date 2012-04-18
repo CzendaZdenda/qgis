@@ -235,7 +235,8 @@ class LayerComboBox(QComboBox):
             self.onCurrentIndexChanged)
     def setLayers(self, layers):
         self.layers = list(layers)
-        self.layers.insert(0, None)
+        if None not in self.layers: # or check just first value?
+            self.layers.insert(0, None)
         layerNames = list()
         for l in self.layers:
             if not l:
@@ -277,9 +278,9 @@ class RangeBox(QHBoxLayout):
         if values:
             self.setValue(values)
         QObject.connect(self.lowBox,
-            SIGNAL("valueChanged(int)"), self.onLowValueChanged)
+            SIGNAL("valueChanged(double)"), self.onLowValueChanged)
         QObject.connect(self.highBox,
-            SIGNAL("valueChanged(int)"), self.onHighValueChanged)
+            SIGNAL("valueChanged(double)"), self.onHighValueChanged)
     def setValue(self, values):
         low, high = sorted(values)
         self.lowBox.setValue(low)

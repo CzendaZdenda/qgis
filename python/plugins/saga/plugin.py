@@ -329,10 +329,6 @@ class ModuleInstance(processing.ModuleInstance):
             elif not param.layer:
                 continue
             basename = "qgis-saga%s" % id(param.layer)
-            print "in saga plugin"
-            print param.layer
-            print param.layer.dataProvider()
-            print param.layer.dataProvider().dataSourceUri()
             dpUri = str(param.layer.dataProvider().dataSourceUri())
             dpDescription = param.layer.dataProvider().description()              
             if pc == VectorLayerParameter:
@@ -407,7 +403,7 @@ class ModuleInstance(processing.ModuleInstance):
                     param.sagaLayer.Save(fn)
                     # load it into QGIS.
                     # TODO: where?
-                    iface.addVectorLayer(fn.c_str(), basename, "ogr")
+                    #iface.addVectorLayer(fn.c_str(), basename, "ogr")
                 elif pc == RasterLayerParameter:
                     # no implicit conversion!
                     sagaFn = sagaTempFilename(basename, "sgrd")
@@ -416,7 +412,7 @@ class ModuleInstance(processing.ModuleInstance):
                     param.sagaLayer.Save(sagaFn)
                     # load it into QGIS.
                     # TODO: where?
-                    iface.addRasterLayer(qgisFn, basename)
+                    #iface.addRasterLayer(qgisFn, basename)
         else:
             self.setFeedback("Module execution failed.")
         self.setState(StateParameter.State.stopped)

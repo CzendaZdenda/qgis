@@ -7,4 +7,4 @@ ADD_SUBDIRECTORY(processingmanager)
 ADD_SUBDIRECTORY(saga)
 ADD_SUBDIRECTORY(workflow_builder)
 ADD_SUBDIRECTORY(basicmodule)
-
+ADD_SUBDIRECTORY(inputparameters)

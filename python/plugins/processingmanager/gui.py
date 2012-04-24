@@ -184,12 +184,19 @@ class SaveDialog(QDialog,  Ui_savedialog):
                         
     def saveWorkflow(self):
         self.graph.name = self.lineEditName.text()
-        self.graph.description = self.description.toPlainText()
-        self.graph.tags = str( self.lineEditTags.text() ).split( "," )
-        self.graph.save()
-        #TODO: after saving load it into PF Manager
-        reloadPlugin('workflow_builder')
-        reloadPlugin('processingplugin')
+        if self.graph.name == "":
+            msgBox = QMessageBox(self)
+            msgBox.setText("You have to type name of your new module.")
+            msgBox.show()
+            #msgBox.exec_()
+        else:
+            # TODO: check whether exist file with this name
+            self.graph.description = self.description.toPlainText()
+            self.graph.tags = str( self.lineEditTags.text() ).split( "," )
+            self.graph.save()
+            #TODO: after saving load it into PF Manager
+            reloadPlugin('workflow_builder')
+            reloadPlugin('processingplugin')
         
 class GraphicsView(QGraphicsView):
     '''

@@ -5,7 +5,6 @@ import math
 import cPickle
 import pickle
 
-
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from PyQt4.Qt import *
@@ -18,6 +17,11 @@ import processingplugin
 import processing
 from processing.parameters import *
 from ui_savedialog import Ui_savedialog
+
+try:
+    _fromUtf8 = QString.fromUtf8
+except AttributeError:
+    _fromUtf8 = lambda s: s
 
 # some graphics parameters...
 PORT_WIDTH = 10
@@ -40,7 +44,11 @@ def widgetByPort(port, save=False):
     wHLayout = QHBoxLayout()
     
     # add name to layout
-    label = QLabel(QString("{0}".format(port.name)))
+    if port.portType is PortType.Destination:
+        label = QLabel(QString("{0}".format(port.name)))
+    elif port.portType is PortType.Source:
+        label = QLabel(QString("> {0}".format(port.name)))
+        label.setToolTip("output")
     wVLayout.addWidget(label)
         
     if (save):
@@ -61,35 +69,8 @@ def widgetByPort(port, save=False):
         
         wHLayout.addWidget(checkSetIt)
     else:
-        # set first checkbox according port is empty or not; if is it available
-        checkIsEmpty= QCheckBox()
-        checkIsEmpty.setEnabled(False)
-        if port.isEmpty():
-            checkIsEmpty.setChecked(True)
-        else:
-            checkIsEmpty.setChecked(False)        
-        
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(checkIsEmpty.sizePolicy().hasHeightForWidth())
-        checkIsEmpty.setSizePolicy(sizePolicy)
-        checkIsEmpty.setTristate(False)
-        # set second checkbox according port is mandatory or not
-        checkIsMandatory= QCheckBox()
-        checkIsMandatory.setEnabled(False)
-        if port.optional:
-            checkIsMandatory.setChecked(False)
-        else:
-            checkIsMandatory.setChecked(True)
-        sizePolicy.setHeightForWidth(checkIsMandatory.sizePolicy().hasHeightForWidth())
-        checkIsMandatory.setSizePolicy(sizePolicy)
-        checkIsMandatory.setTristate(False)
-            
-        # add checkBoxes to layout
-        wHLayout.addWidget(checkIsEmpty)
-        wHLayout.addWidget(checkIsMandatory)
-        
+        pass
+
     # Add parameterValue  > if Layer - disable     
     pc = port.type
     value = port.getValue()
@@ -150,7 +131,16 @@ def widgetByPort(port, save=False):
         wHLayout.addWidget(w)
     else:
         wHLayout.addLayout(w)
-    
+
+    if not save and not port.isEmpty():
+        isChained = QLabel()
+        pixmap = QPixmap(_fromUtf8(":/icon/chain"))
+        isChained.setMaximumSize(QSize(24, 24))
+        isChained.setPixmap(pixmap)
+        isChained.setToolTip("is connected with other parameter")
+        wHLayout.addWidget(isChained)
+
+
     if (save):
         alternativeName = QLineEdit("Alternative name for parameter", None)
         QObject.connect( alternativeName,  SIGNAL("textChanged(QString)"), lambda v: port.setAlternativeName(v) )
@@ -477,27 +467,26 @@ class DiagramScene(QGraphicsScene):
                             Give information about module.
                         """
                         module = tmpModule.module
-                        #TODO: look at models from MVC
                         self.parent().item.setText(QString("Module - %s" % (module.label)))
                         self.parent().textEditDesc.setText(module.description)
                         self.parent().toolBox.setCurrentIndex(0)
                         self.parent().toolBox.setItemEnabled(0, True)
+                        # devide mandatory and optional ports/parameters 
                         for port in module._ports.values():
-#                            widget = widgetByPort(port,  save=False)
                             widget = widgetByPort(port)
-                            if port.portType is PortType.Destination:                                
-                                self.parent().inputForm.addRow(widget)
-                            elif port.portType is PortType.Source:
-                                self.parent().outputForm.addRow(widget)
+                            if port.optional:
+                                self.parent().optionalForm.addRow(widget)
+                            else:
+                                self.parent().mandatoryForm.addRow(widget)
 
             self.justClick = False
         
     def clearDockPanel(self):
-        for w in self.parent().inputWidget.children():
+        for w in self.parent().mandatoryWidget.children():
             if w.isWidgetType():
                 w.setParent(None)
                 del(w)
-        for w in self.parent().outputWidget.children():
+        for w in self.parent().optionalWidget.children():
             if w.isWidgetType():
                 w.setParent(None)
                 del(w)
@@ -886,6 +875,9 @@ class QGraphicsModuleItem(QGraphicsItem):
         """
         portShape = QGraphicsPortItem(x, y, self, port.optional)
         portShape.port = port
+        # sest tooltip
+        tooltip = port.getToolTip()
+        portShape.setToolTip(tooltip)
         return portShape
     
     def getPortPosition(self, port, portDict):

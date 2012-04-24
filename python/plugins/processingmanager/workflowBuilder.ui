@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>826</width>
-    <height>644</height>
+    <width>754</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -50,7 +50,7 @@
               <x>0</x>
               <y>0</y>
               <width>332</width>
-              <height>400</height>
+              <height>236</height>
              </rect>
             </property>
             <attribute name="label">
@@ -60,15 +60,15 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
-               <widget class="QWidget" name="inputTab">
+               <widget class="QWidget" name="mandatoryTab">
                 <attribute name="title">
-                 <string>Input</string>
+                 <string>Mandatory</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="verticalLayout_5">
                  <item>
-                  <widget class="QScrollArea" name="inputScroll">
+                  <widget class="QScrollArea" name="mandatoryScroll">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
@@ -78,13 +78,13 @@
                    <property name="widgetResizable">
                     <bool>true</bool>
                    </property>
-                   <widget class="QWidget" name="inputWidget">
+                   <widget class="QWidget" name="mandatoryWidget">
                     <property name="geometry">
                      <rect>
                       <x>0</x>
                       <y>0</y>
                       <width>292</width>
-                      <height>331</height>
+                      <height>167</height>
                      </rect>
                     </property>
                     <property name="sizePolicy">
@@ -93,19 +93,19 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <layout class="QFormLayout" name="inputForm"/>
+                    <layout class="QFormLayout" name="mandatoryForm"/>
                    </widget>
                   </widget>
                  </item>
                 </layout>
                </widget>
-               <widget class="QWidget" name="outputTab">
+               <widget class="QWidget" name="optionalTab">
                 <attribute name="title">
-                 <string>Output</string>
+                 <string>Optional</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="verticalLayout_6">
                  <item>
-                  <widget class="QScrollArea" name="outputScroll">
+                  <widget class="QScrollArea" name="optionalScroll">
                    <property name="frameShape">
                     <enum>QFrame::NoFrame</enum>
                    </property>
@@ -115,13 +115,13 @@
                    <property name="widgetResizable">
                     <bool>true</bool>
                    </property>
-                   <widget class="QWidget" name="outputWidget">
+                   <widget class="QWidget" name="optionalWidget">
                     <property name="geometry">
                      <rect>
                       <x>0</x>
                       <y>0</y>
                       <width>292</width>
-                      <height>331</height>
+                      <height>167</height>
                      </rect>
                     </property>
                     <property name="sizePolicy">
@@ -130,7 +130,7 @@
                       <verstretch>0</verstretch>
                      </sizepolicy>
                     </property>
-                    <layout class="QFormLayout" name="outputForm"/>
+                    <layout class="QFormLayout" name="optionalForm"/>
                    </widget>
                   </widget>
                  </item>
@@ -146,7 +146,7 @@
               <x>0</x>
               <y>0</y>
               <width>332</width>
-              <height>400</height>
+              <height>236</height>
              </rect>
             </property>
             <attribute name="label">
@@ -164,6 +164,9 @@
           <layout class="QGridLayout" name="buttonLayout">
            <item row="0" column="0">
             <widget class="QPushButton" name="executeButton">
+             <property name="toolTip">
+              <string extracomment="execute workflow"/>
+             </property>
              <property name="text">
               <string>Execute</string>
              </property>
@@ -171,6 +174,9 @@
            </item>
            <item row="1" column="0">
             <widget class="QPushButton" name="cancelButton">
+             <property name="toolTip">
+              <string extracomment="close dialog"/>
+             </property>
              <property name="text">
               <string>Cancel</string>
              </property>
@@ -178,6 +184,9 @@
            </item>
            <item row="0" column="1">
             <widget class="QPushButton" name="saveButton">
+             <property name="toolTip">
+              <string extracomment="open dialog to save workflow"/>
+             </property>
              <property name="text">
               <string>Save</string>
              </property>
@@ -185,6 +194,9 @@
            </item>
            <item row="1" column="1">
             <widget class="QPushButton" name="clearButton">
+             <property name="toolTip">
+              <string extracomment="delete workflow"/>
+             </property>
              <property name="text">
               <string>Clear</string>
              </property>
@@ -210,6 +222,8 @@
    <header>gui</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="processing.qrc"/>
+ </resources>
  <connections/>
 </ui>

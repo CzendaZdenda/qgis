@@ -96,9 +96,6 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
     def _onExecuteButtonClicked(self):
         """
             Create Graph, check if everything is set. Execute it.
-            TODO: 
-                Open dialog to set inputs layers.
-                There should be possibility to point which parameters should be set before executing Workflow/Graph.
         """
         self.statusBar.showMessage(QString("Executing..."),  200000)
         self.createGraph()

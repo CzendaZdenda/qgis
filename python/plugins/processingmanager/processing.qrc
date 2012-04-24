@@ -2,5 +2,6 @@
   <qresource prefix="icon">
     <file alias="32">processing32.png</file>
     <file alias="64">processing64.png</file>
+    <file alias="chain">chained.png</file>
   </qresource>
 </RCC>

@@ -640,6 +640,16 @@ class Port(object):
             return self._outputName
         except:
             return self.name
+    def getToolTip(self):
+        """
+            Generate tool tip for QGraphicsPortItem.
+        """
+        try:
+            return self.tooltip
+        except:
+            self.tooltip = '<b>{0}</b> {1}'.format(self.name, str(self.type).split('.')[-1])
+            return self.tooltip
+
 class Connection(object):
     """
         Connection between source and destination Ports. We also keep references to source and destination Modules.

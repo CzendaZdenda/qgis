@@ -1,12 +1,12 @@
 from random import randint
 from xml.dom.minidom import Document
         
-from PyQt4.QtCore import QPointF,  QFileInfo,  QDir
+from PyQt4.QtCore import QPointF,  QFileInfo,  QDir,  QObject,  SIGNAL
 from qgis.core import *
 
 import processing
 
-class Graph(object):
+class Graph(QObject):
     """
         Graph of workflows. It keeps list of subgraphs (SubGraph).
         methods:
@@ -24,6 +24,7 @@ class Graph(object):
             xml()                                   - to get xml.dom.minidom.Element representation of this Graph.
     """
     def __init__(self):
+        QObject.__init__(self)
         self.name = "Graph"
         self.description = ""
         self.tags = []
@@ -31,6 +32,9 @@ class Graph(object):
         self.modules = {}
         self.connections = {}
         self.subgraphs = {}
+        
+    def loopError(self, msg = "loop"):
+        self.emit(SIGNAL("graph"), "loop")
       
     def addModule(self, mod):
         """
@@ -117,6 +121,7 @@ class Graph(object):
 
         return graphXML
         
+
     def executeGraph(self):
         """
             To execute Graph -> execute all SubGraphs -> execute all Modules in SubGraphs.
@@ -125,10 +130,18 @@ class Graph(object):
         for sub in self.subgraphs.values():
             sub.prepareToExecute()
             if sub.isValid():
-                sub.executeSGraph()
+                # print sub.findLoop()
+                self.connect(sub, SIGNAL("subgraph"), self.loopError)
+                if not sub.executeSGraph():
+                    self.setToAllModulesIsNotIn()                    
+                    return False              
             else:
                 self._invalidSubGraph = sub
+                self.emit(SIGNAL("graph"), "set")
+                self.setToAllModulesIsNotIn()
                 return False
+                
+            self.setToAllModulesIsNotIn()
                 
         # alfter execution set all connected or output layers as default
         for mod in self.modules.values():
@@ -138,7 +151,10 @@ class Graph(object):
                     mod.getInstancePF().setValue(port.parameterInstance, port.defaultValue)
                     port.setAddItToCanvas(False)
         return True
-        
+
+    def setToAllModulesIsNotIn(self):
+        for mod in self.modules.values():
+            mod.setIsIn(False)
     def getModulesBySubGraphId(self, id):
         """
             Return dic of Modules corresponding with given SubGraph.id.
@@ -148,8 +164,15 @@ class Graph(object):
             if mod._sGraph.id == id:
                 tmp[mod.id] = mod
         return tmp
+    def findLoop(self):
+        for sub in self.subgraphs.values():
+            loop = sub.findLoop()
+            if loop:
+                self.loopError(loop)
+                return True
+        return False
 
-class SubGraph(object):
+class SubGraph(QObject):
     """
         SubGraph keeps list of modules (Module) and connections (Connection).
         methods:
@@ -164,6 +187,7 @@ class SubGraph(object):
             getModuleByID(int)
     """
     def __init__(self):
+        QObject.__init__(self)
         self.id = randint(1, 200)
         self.modules = {}
         self.connections = {}
@@ -195,7 +219,35 @@ class SubGraph(object):
             self.setValid(True)
         else:
             self._invalidInputs = inputs
-            
+#    def findLoop(self):
+#        # modules of subgraph
+#        if not self.modules.values():
+#            self.modules = self.graph.getModulesBySubGraphId(self.id) 
+#        modules = self.modules.values()[:]
+#
+#        def setModule(mod):
+#            if  mod.getIsIn():
+#                print "loop"
+#                self.emit(SIGNAL("subgraph"), "loop")
+#                return False                
+#            else:
+#                mod.setIsIn(True)
+#                for p in mod.getPorts():
+#                    if not p.optional:
+#                        if p.portType == PortType.Destination:
+#                            sModule = p.findSourceModule(self._connections)
+#                            if not setModule(sModule):
+#                                return False
+#                mod.setIsIn(False)
+#                return True
+#            
+#        while modules:
+#            mod = modules.pop()
+#            if mod.id in self.modules:
+#                if not setModule(mod):
+#                    return True
+#        return False
+        
     def addModule(self, mod):
         """
             mod: Module
@@ -238,23 +290,36 @@ class SubGraph(object):
             looking for module with what is it connected and execute it.
         """
         # modules of subgraph
-
         if not self.modules.values():
             self.modules = self.graph.getModulesBySubGraphId(self.id) 
         modules = self.modules.values()[:]
         
+#        for mod in modules:
+#            mod.setIsIn(False)        
+             
         def setModule(mod):
-            for p in mod.getPorts():
-                if not p.isSet() and not p.optional:
-                    if p.portType == PortType.Destination:
-                        sModule = p.findSourceModule(self._connections)
-                        setModule(sModule)
-            mod.execute()
+            if  mod.getIsIn():
+                self.emit(SIGNAL("subgraph"), "loop")
+                return False                
+            else:
+                mod.setIsIn(True)
+                for p in mod.getPorts():
+                    if not p.isSet() and not p.optional:
+                        if p.portType == PortType.Destination:
+                            sModule = p.findSourceModule(self._connections)
+                            if not setModule(sModule):
+                                return False
+                mod.execute()
+                mod.setIsIn(False)
+                return True
             
         while modules:
             mod = modules.pop()
             if mod.id in self.modules:
-                setModule(mod)
+                if not setModule(mod):
+                    return False
+        
+        return True
         
     def xml(self):
         """
@@ -273,7 +338,44 @@ class SubGraph(object):
             Return Module corresponding to given id.
         """
         return self.modules[id]
+    def findLoop(self):
+        """
+            It uses depth-first search for every vertex of the graph/subgraph.
+        """
+        def find(v):
+            v.mark = True
+            eV = []
+            # find edges which are going from v vertex
+            for edge in E:
+                if v.id is edge[0].id:
+                    eV.append(edge)
+            for e in eV:
+                w = e[1]
+                if w.id is vv.id:
+                    vv.loop =  "loop {0} - {1} - {0}".format(vv.label,  v.label)
+                    break
+                if not w.mark:
+                    find(w)
         
+        # V is list of modules' id
+        V = self.modules.values()
+        # E is list of couple of vertices of connections
+        E = map( lambda con: [con.sModule, con.dModule], self.graph.connections.values() )        
+
+        # clean all vertices
+        for v in V:
+            v.mark = False
+            v.loop = False
+
+        # depth-first search for all vertices
+        for vv in V:
+            find(vv)
+            for v in V:
+                v.mark = False
+            if vv.loop:
+                return vv.loop
+        return False
+
 class Module(object):
     """
         methods:
@@ -299,7 +401,15 @@ class Module(object):
         self._instance = None
         self._sGraph = None
         self._ports = {}
+        # use it for detect loop while executing graph
+        self._isIn = False
+        self.mark = False
+        self.loop = False
 
+    def setIsIn(self, bool):
+        self._isIn = bool
+    def getIsIn(self):
+        return self._isIn
     def setSGraph(self, sgraph):
         """
             To keep reference of SubGraph to which module is belong.

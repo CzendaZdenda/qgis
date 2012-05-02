@@ -416,7 +416,7 @@ class DiagramScene(QGraphicsScene):
                                 startPort = item2.port
                                 startModule = item2.findModuleUnder(item2.scenePos()).module
                         # one port shloud be Source, the other one Destination and both should be of same type (like Numeric, Raster, ...)
-                        if startPort.type == endPort.type and startPort.portType != endPort.portType and startModule.id != endModule.id and startPort.isEmpty() and endPort.isEmpty():
+                        if startPort.type == endPort.type and startPort.portType != endPort.portType and startModule.id != endModule.id and startPort.isEmpty():# and endPort.isEmpty():
                             # test if startPoint is really source point of connection, otherwise switch them
                             if startPort.portType != PortType.Source:
                                 tmp = endPort

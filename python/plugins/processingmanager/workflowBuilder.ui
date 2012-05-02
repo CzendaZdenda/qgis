@@ -60,7 +60,7 @@
              <item>
               <widget class="QTabWidget" name="tabWidget">
                <property name="currentIndex">
-                <number>1</number>
+                <number>0</number>
                </property>
                <widget class="QWidget" name="mandatoryTab">
                 <attribute name="title">
@@ -145,8 +145,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>332</width>
-              <height>236</height>
+              <width>102</width>
+              <height>102</height>
              </rect>
             </property>
             <attribute name="label">

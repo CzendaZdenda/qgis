@@ -53,7 +53,23 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
         QObject.connect(self.saveButton, SIGNAL("clicked()"), self._onSaveButtonClicked)
         QObject.connect(self.cancelButton, SIGNAL("clicked()"), self.reject)
         QObject.connect(self.clearButton, SIGNAL("clicked()"), self._onClearButtonClicked)
+        QObject.connect(self.graph, SIGNAL("graph"), self.errorMessage)
 
+    def errorMessage(self, err):
+        if err is "set":
+            self.statusBar.showMessage(QString("You should set selected modules."),  5000)
+            self.scene.clearSelection()
+            self.scene.clearDockPanel()
+            for key in self.graph._invalidSubGraph._invalidInputs.keys():
+                invalidMod = self.graph._invalidSubGraph._invalidInputs[key]
+                invalidPort = key
+                gInvalidMod = self.scene.findGraphicsModule(invalidMod)
+                if gInvalidMod:
+                    gInvalidMod.setSelected(True)
+        elif err is "loop":
+            self.statusBar.showMessage(QString("Graph contains loop(s)."),  5000)
+        else:
+            self.statusBar.showMessage(QString(err),  5000)
     def createGraph(self):
         """
             From modules and connections in scene we will create Graph and sort Modules to Subgraphs.
@@ -99,18 +115,13 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
         """
         self.statusBar.showMessage(QString("Executing..."),  200000)
         self.createGraph()
-        if self.graph.executeGraph():
-            self.statusBar.showMessage(QString("Executed successfully."),  2000)
-        else:
-            self.statusBar.showMessage(QString("You should set selected modules."),  5000)
-            self.scene.clearSelection()
-            self.scene.clearDockPanel()
-            for key in self.graph._invalidSubGraph._invalidInputs.keys():
-                invalidMod = self.graph._invalidSubGraph._invalidInputs[key]
-                invalidPort = key
-                gInvalidMod = self.scene.findGraphicsModule(invalidMod)
-                if gInvalidMod:
-                    gInvalidMod.setSelected(True)
+        if not self.graph.findLoop():
+            if self.graph.executeGraph():
+                self.statusBar.showMessage(QString("Executed successfully."),  2000)
+            else:
+                #self.statusBar.showMessage(QString("Executed not successfully."),  2000)
+                pass
+                #self.statusBar.clearMessage()
                 
     def _onSaveButtonClicked(self):
         """
@@ -118,9 +129,10 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
         """
         self.statusBar.showMessage(QString("Saving..."),  2000)
         self.createGraph()
-        if self.graph:
-            svDialog = SaveDialog(self.graph, self)
-            svDialog.show()
+        if not self.graph.findLoop():
+            if self.graph:
+                svDialog = SaveDialog(self.graph, self)
+                svDialog.show()
 
     def _onClearButtonClicked(self):
         """

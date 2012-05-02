@@ -130,18 +130,12 @@ class Graph(QObject):
         for sub in self.subgraphs.values():
             sub.prepareToExecute()
             if sub.isValid():
-                # print sub.findLoop()
                 self.connect(sub, SIGNAL("subgraph"), self.loopError)
-                if not sub.executeSGraph():
-                    self.setToAllModulesIsNotIn()                    
-                    return False              
+                sub.executeSGraph()
             else:
                 self._invalidSubGraph = sub
                 self.emit(SIGNAL("graph"), "set")
-                self.setToAllModulesIsNotIn()
                 return False
-                
-            self.setToAllModulesIsNotIn()
                 
         # alfter execution set all connected or output layers as default
         for mod in self.modules.values():
@@ -293,33 +287,19 @@ class SubGraph(QObject):
         if not self.modules.values():
             self.modules = self.graph.getModulesBySubGraphId(self.id) 
         modules = self.modules.values()[:]
-        
-#        for mod in modules:
-#            mod.setIsIn(False)        
-             
+                     
         def setModule(mod):
-            if  mod.getIsIn():
-                self.emit(SIGNAL("subgraph"), "loop")
-                return False                
-            else:
-                mod.setIsIn(True)
-                for p in mod.getPorts():
-                    if not p.isSet() and not p.optional:
-                        if p.portType == PortType.Destination:
-                            sModule = p.findSourceModule(self._connections)
-                            if not setModule(sModule):
-                                return False
-                mod.execute()
-                mod.setIsIn(False)
-                return True
+            for p in mod.getPorts():
+                if not p.isSet() and not p.optional:
+                    if p.portType == PortType.Destination:
+                        sModule = p.findSourceModule(self._connections)
+                        setModule(sModule)
+            mod.execute()
             
         while modules:
             mod = modules.pop()
             if mod.id in self.modules:
-                if not setModule(mod):
-                    return False
-        
-        return True
+                setModule(mod)
         
     def xml(self):
         """

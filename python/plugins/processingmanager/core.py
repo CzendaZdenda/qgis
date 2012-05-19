@@ -14,9 +14,9 @@ class Graph(QObject):
             getSubGraphByID(int)          - to get SubGraph according the int
             getModulesBySubGraphID(int) - return dic of Modules corresponding with given SubGraph.id
             addModule(Module)              - to add Module to Graph
-            getModuleByID(int)              - 
+            getModuleByID(int)              -
             addConnection(Connection) - to add Connection to Graph
-            getConnectionByID(int)        - 
+            getConnectionByID(int)        -
             isValid()                                - whether Graph is valid
             setValid(boolean)                  - set if Graph is valid
             executeGraph()                    - to execute Graph -> execute all SubGraphs -> execute all Modules in SubGraph
@@ -32,10 +32,11 @@ class Graph(QObject):
         self.modules = {}
         self.connections = {}
         self.subgraphs = {}
-        
+        self.path = None
+
     def loopError(self, msg = "loop"):
         self.emit(SIGNAL("graph"), "loop")
-      
+
     def addModule(self, mod):
         """
             Add Module 'mod' to Graph.
@@ -50,7 +51,7 @@ class Graph(QObject):
             Return Module according the id.
         """
         return self.modules[id]
-    def addConnection(self, con):  
+    def addConnection(self, con):
         """
             Add Connection 'con' to Graph.
         """
@@ -58,13 +59,13 @@ class Graph(QObject):
             con.id = randint(1, 2000)
         self.connections[con.id] = con
         # add reference to Graph to Connection instance
-        con.graph = self        
+        con.graph = self
     def getConnectionByID(self, id):
         """
             Return Connection according the id.
         """
         return self.connections[id]
-    def addSubGraph(self, sub):  
+    def addSubGraph(self, sub):
         """
             Add SubGraph 'sub' to Graph.
         """
@@ -72,18 +73,18 @@ class Graph(QObject):
             sub.id = randint(1, 200)
         self.subgraphs[sub.id] = sub
         # add reference to Graph to Connection instance
-        sub.graph = self        
+        sub.graph = self
 
     def getSubGraphByID(self, id):
         """
             Return SubGraph according to id.
         """
-        return self.subgraphs[id]        
-        
+        return self.subgraphs[id]
+
     def isValid(self):
         """
-            Return if graph is valid. It should means, that all subgraphs are valid, that means that all modules of those subgraphs are valid, 
-            values of ports are set or ports are conencted. 
+            Return if graph is valid. It should means, that all subgraphs are valid, that means that all modules of those subgraphs are valid,
+            values of ports are set or ports are conencted.
         """
         return self._isValid
 
@@ -107,7 +108,7 @@ class Graph(QObject):
         f = open( "{0}/{1}.xml".format(pathXML, filename) , "w")
         doc.writexml(f,  indent="\n",  addindent="\t", encoding="UTF-8")
         f.close()
-            
+
     def xml(self):
         """
             It returns xml.dom.minidom.Element representation of this Graph.
@@ -120,7 +121,7 @@ class Graph(QObject):
             graphXML.appendChild(sub.xml())
 
         return graphXML
-        
+
 
     def executeGraph(self):
         """
@@ -136,7 +137,7 @@ class Graph(QObject):
                 self._invalidSubGraph = sub
                 self.emit(SIGNAL("graph"), "set")
                 return False
-                
+
         # alfter execution set all connected or output layers as default
         for mod in self.modules.values():
             for port in mod.getPorts():
@@ -187,7 +188,7 @@ class SubGraph(QObject):
         self.connections = {}
         self._connections = []
         self._isValid = False
-        
+
     def prepareToExecute(self):
         """
             We are looking if every Module is valid. It means that every input is set or connected with the output of another Module.
@@ -213,42 +214,14 @@ class SubGraph(QObject):
             self.setValid(True)
         else:
             self._invalidInputs = inputs
-#    def findLoop(self):
-#        # modules of subgraph
-#        if not self.modules.values():
-#            self.modules = self.graph.getModulesBySubGraphId(self.id) 
-#        modules = self.modules.values()[:]
-#
-#        def setModule(mod):
-#            if  mod.getIsIn():
-#                print "loop"
-#                self.emit(SIGNAL("subgraph"), "loop")
-#                return False                
-#            else:
-#                mod.setIsIn(True)
-#                for p in mod.getPorts():
-#                    if not p.optional:
-#                        if p.portType == PortType.Destination:
-#                            sModule = p.findSourceModule(self._connections)
-#                            if not setModule(sModule):
-#                                return False
-#                mod.setIsIn(False)
-#                return True
-#            
-#        while modules:
-#            mod = modules.pop()
-#            if mod.id in self.modules:
-#                if not setModule(mod):
-#                    return True
-#        return False
-        
+
     def addModule(self, mod):
         """
             mod: Module
         """
         self.modules[mod.id] = mod
         mod.setSGraph(self)
-    
+
     def getModules(self):
         """
             Return list modules (Module) of subgraph.
@@ -260,7 +233,7 @@ class SubGraph(QObject):
             cons: list of Connections
         """
         self._connections = cons
-    
+
     def getConnections(self):
         """
             Return list connections (Connection) between modules that exist in the subgraph.
@@ -285,9 +258,9 @@ class SubGraph(QObject):
         """
         # modules of subgraph
         if not self.modules.values():
-            self.modules = self.graph.getModulesBySubGraphId(self.id) 
+            self.modules = self.graph.getModulesBySubGraphId(self.id)
         modules = self.modules.values()[:]
-                     
+
         def setModule(mod):
             for p in mod.getPorts():
                 if not p.isSet() and not p.optional:
@@ -295,24 +268,24 @@ class SubGraph(QObject):
                         sModule = p.findSourceModule(self._connections)
                         setModule(sModule)
             mod.execute()
-            
+
         while modules:
             mod = modules.pop()
             if mod.id in self.modules:
                 setModule(mod)
-        
+
     def xml(self):
         """
             It returns xml.dom.minidom.Element representation of this SubGraph.
-        """        
+        """
         subXML = Document().createElement("SubGraph")
         subXML.setAttribute("id", "{0}".format(self.id))
         for mod in self.modules.values():
-            subXML.appendChild(mod.xml())                    
+            subXML.appendChild(mod.xml())
         for con in self._connections:
             subXML.appendChild(con.xml())
         return subXML
-        
+
     def getModuleByID(self, id):
         """
             Return Module corresponding to given id.
@@ -336,11 +309,11 @@ class SubGraph(QObject):
                     break
                 if not w.mark:
                     find(w)
-        
+
         # V is list of modules' id
         V = self.modules.values()
         # E is list of couple of vertices of connections
-        E = map( lambda con: [con.sModule, con.dModule], self.graph.connections.values() )        
+        E = map( lambda con: [con.sModule, con.dModule], self.graph.connections.values() )
 
         # clean all vertices
         for v in V:
@@ -385,6 +358,7 @@ class Module(object):
         self._isIn = False
         self.mark = False
         self.loop = False
+        self.gmodule = None
 
     def setIsIn(self, bool):
         self._isIn = bool
@@ -418,11 +392,11 @@ class Module(object):
                     if not port.isValid():
                         return False
         return True
-            
+
     def getPorts(self,  type = None):
         """
             Return list of Port according to the type if given, else return all ports.
-            type: PortType - Destination or Source            
+            type: PortType - Destination or Source
         """
         ports = []
         if type is None:
@@ -518,7 +492,7 @@ class Module(object):
                 if p.type in [processing.parameters.RasterLayerParameter, processing.parameters.VectorLayerParameter]:
                     for pp in p.destinationPorts(self._sGraph.getConnections()):
                         pp.setValue(p.outputData())
-        else:  
+        else:
             pass
     def xml(self):
         """
@@ -527,17 +501,19 @@ class Module(object):
         modXML = Document().createElement("Module")
         modXML.setAttribute("name", "{0}".format(self.label))
         modXML.setAttribute("id", "{0}".format(self.id))
+        modXML.setAttribute("x", "{0}".format(self.gmodule.x()))
+        modXML.setAttribute("y", "{0}".format(self.gmodule.y()))
         modXML.appendChild( Document().createTextNode("{0}".format(self.description)) )
         for tag in self.tags:
             t = Document().createElement("tag")
             t.appendChild( Document().createTextNode( "{0}".format(tag) ) )
-            modXML.appendChild(t)            
+            modXML.appendChild(t)
         for port in self._ports.values():
-            modXML.appendChild(port.xml())        
+            modXML.appendChild(port.xml())
         return modXML
     def getPortByID(self, id):
         return self._ports[id]
-        
+
 class PortType(object):
     Destination,  Source = 1, 2
 
@@ -557,8 +533,8 @@ class Port(object):
             destinationPorts(list<Connection>)
             findSourceModule(list<Connection>)
             xml()                                                   - return xml.dom.minidom.Element representation of this Port
-            setSetIt(boolean)                                 - 
-            setAlternativeName(string)                  - 
+            setSetIt(boolean)                                 -
+            setAlternativeName(string)                  -
     """
     def __init__(self, dValue = None,  portType=None, type = None, moduleId = None,  name = None,  optional = False ):
         """
@@ -583,10 +559,10 @@ class Port(object):
         self._outputData = None
         # whether user want to set its value if he/she will execute workflow as module from PF manager
         self.setIt = False
-    
+
     def setOutputData(self, output):
         self._outputData = output
-        
+
     def outputData(self):
         return self._outputData
 
@@ -595,17 +571,17 @@ class Port(object):
             Set data that are propposed by PF module - usually list of choices.
         """
         self._data = tmp
-        
+
     def getData(self):
         return self._data
-    
+
     def setValue(self, val):
         if type(val) == str:
             if self.type is processing.parameters.NumericParameter:
                 self._value = float(val)
             elif self.type is processing.parameters.RangeParameter:
                 range = val[1:-1].split(', ')
-                self._value = [float(range[0]), float(range[1])] 
+                self._value = [float(range[0]), float(range[1])]
             elif self.type is processing.parameters.BooleanParameter:
                 if val == "True":
                     self._value = True
@@ -620,19 +596,19 @@ class Port(object):
                 self._value = val
         else:
             self._value = val
-        
+
     def getValue(self):
         return self._value
-        
+
     def isEmpty(self):
         """
             If Port is empty it meens, that there is no connection between this Port and some other one.
         """
         return self.empty
-        
+
     def setEmpty(self, empty = True):
         self.empty = empty
-        
+
     def isSet(self):
         """
             If Value is set.
@@ -643,7 +619,7 @@ class Port(object):
             return True
         return False
 
-        
+
     def isValid(self):
         """
             Input Port is valid if value is set or connection exist. Output Port is valid in general.
@@ -662,7 +638,7 @@ class Port(object):
         """
         conns = self.graph.connections.values()
         for con in conns:
-            if ( con.sModule.id == self.moduleId and con.source.id == self.id) or ( con.dModule.id == self.moduleId and con.destination.id == self.id): 
+            if ( con.sModule.id == self.moduleId and con.source.id == self.id) or ( con.dModule.id == self.moduleId and con.destination.id == self.id):
                 return True
         return False
 
@@ -674,7 +650,7 @@ class Port(object):
         if conns is None:
             conns = self.graph.connections.values()
         for con in conns:
-            if con.sModule.id == self.moduleId and con.source.id == self.id: 
+            if con.sModule.id == self.moduleId and con.source.id == self.id:
                 tmp.append(con.destination)
         return tmp
 
@@ -685,7 +661,7 @@ class Port(object):
         if conns is None:
             conns = self.graph.connections.values()
         for con in conns:
-            if con.dModule.id == self.moduleId and con.destination.id == self.id: 
+            if con.dModule.id == self.moduleId and con.destination.id == self.id:
                 return con.sModule
         return False
     def xml(self):
@@ -704,6 +680,7 @@ class Port(object):
         portXML.setAttribute("value", "{0}".format(self._value))
         portXML.setAttribute("moduleID", "{0}".format(self.moduleId))
         portXML.setAttribute("connected", "{0}".format(self.isConnected()))
+#        portXML.setAttribute("setIt", "{0}".format(self.setIt))
         if self.type is processing.parameters.ChoiceParameter:
             portXML.setAttribute("choices", "{0}".format(self._data) )
         try:
@@ -757,7 +734,7 @@ class Connection(object):
         self.destination = destinationPort
         self.sModule = sourceModule
         self.dModule = destinationModule
-        
+
     def xml(self):
         """
             It returns xml.dom.minidom.Element representation of this Connection.
@@ -769,4 +746,3 @@ class Connection(object):
         conXML.setAttribute("source_module_id", "{0}".format(self.sModule.id))
         conXML.setAttribute("destination_module_id", "{0}".format(self.dModule.id))
         return conXML
-

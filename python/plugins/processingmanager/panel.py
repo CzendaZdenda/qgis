@@ -29,21 +29,20 @@ class ProxyModel(QSortFilterProxyModel):
     '''
     Custom proxy model for useful filtering.
     '''
-    def filterAcceptsRow( self, source_row, source_parent ): 
+    def filterAcceptsRow( self, source_row, source_parent ):
         '''
         Re-implementation of QSortFilterProxyModel's' filterAcceptsRow( self, source_row, source_parent ) function.
         It uses not only 'name' of the item, but also tags of item/modul.
         '''
         result = False
-        
+
         useIndex = self.sourceModel().index(source_row,  0,  source_parent)
         name = self.sourceModel().data(useIndex, Qt.DisplayRole).toString()
 
         if ( name.contains(self.filterRegExp()) ):
             result = True
         else:
-            # searching in tags 
-            # TODO: searching in description?
+            # searching in tags
             mod = self.sourceModel().data(useIndex, Qt.UserRole+1).toPyObject()
             for tag in mod.tags():
                 tag = QString(tag)
@@ -51,7 +50,7 @@ class ProxyModel(QSortFilterProxyModel):
                     result = True
                     break
         return result
-    
+
 class Panel(QDockWidget, Ui_dock):
     def __init__(self, iface):
         QDockWidget.__init__(self, iface.mainWindow())
@@ -62,31 +61,31 @@ class Panel(QDockWidget, Ui_dock):
         tags.sort()
 
         # use custom ProxyModel based on QSortFilterProxyModel where source model is QStandardItemModel
-        self.listModel = QStandardItemModel(self)        
+        self.listModel = QStandardItemModel(self)
         self.proxyModel = ProxyModel()
         self.proxyModel.setSourceModel(self.listModel)
         self.proxyModel.setFilterCaseSensitivity(0)
         self.proxyModel.setDynamicSortFilter(True)
-        
+
         # tree-based model, which is default for our view (QTreeView)
         self.treeModel = QStandardItemModel(self)
         self.moduleList.setModel(self.treeModel)
-        
+
         # header is not necessary to visible
         self.moduleList.header().setVisible(False)
-        
+
         # build tree of modules sorted by tag
         self.buildModuleTree(tags)
         # build list of modules
         self.buildModuleList()
-        
+
         self.setFloating(False)
         self._iface.addDockWidget(Qt.RightDockWidgetArea, self)
 
         ## connects
         # if we activated some model from a list/tree
-        self.connect(self.moduleList, 
-                     SIGNAL("activated(QModelIndex)"), 
+        self.connect(self.moduleList,
+                     SIGNAL("activated(QModelIndex)"),
                      self.activated)
         # change offer during searching the module
         self.connect(self.filterBox,
@@ -107,9 +106,9 @@ class Panel(QDockWidget, Ui_dock):
         '''
         After activated item from list, appropriate dialog will appear.
         '''
-        if not ( index.parent().data().toString().isEmpty() ) or not ( isinstance(index.model(), QStandardItemModel) ):	    
+        if not ( index.parent().data().toString().isEmpty() ) or not ( isinstance(index.model(), QStandardItemModel) ):
             module = self.moduleList.model().data(index,Qt.UserRole+1).toPyObject()
-            dialog = Dialog(self._iface, module) 
+            dialog = Dialog(self._iface, module)
             dialog.show()
         else:
             pass
@@ -121,7 +120,7 @@ class Panel(QDockWidget, Ui_dock):
         parentItem = self.treeModel.invisibleRootItem()
         # a set of modules not yet added to the list
         pending = set(processing.framework.modules())
-        
+
         for tag in tags:
                 branch = QStandardItem(tag)
                 modules = sorted(processing.framework.modulesByTag(tag), key=lambda x: x.name())
@@ -150,9 +149,9 @@ class Panel(QDockWidget, Ui_dock):
         '''
         Build list model of modules. This model is used for filtering/searching.
         '''
-        # take all available modules 
+        # take all available modules
         modules = set(processing.framework.modules())
-        
+
         for mod in  modules:
             item = QStandardItem(mod.name())
             item.setData(mod)

@@ -23,7 +23,9 @@
 
 from PyQt4.QtGui import QDialog, QStandardItemModel,  QHBoxLayout
 from PyQt4.QtCore import QString, SIGNAL,  QObject
+
 from qgis.core import *
+from qgis.utils import *
 
 from gui import DiagramScene, SaveDialog
 from core import Graph, SubGraph, PortType
@@ -41,6 +43,7 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
     '''
     def __init__(self,  iface ):
         QDialog.__init__(self,  iface.mainWindow())
+        self.iface = iface
         self.setupUi(self)
         self.setWindowTitle(QString("Workflow Builder v0.01alpha"))
         self.resize(800, 400)
@@ -131,6 +134,11 @@ class WorkflowBuilder(QDialog, Ui_workflowBuilder):
         self.createGraph()
         if not self.graph.findLoop():
             if self.graph:
+                #if self.graph.path:
+                #    self.graph.save()
+                #    reloadPlugin('workflow_builder')
+                #    reloadPlugin('processingmanager')
+                #else:
                 svDialog = SaveDialog(self.graph, self)
                 svDialog.show()
 

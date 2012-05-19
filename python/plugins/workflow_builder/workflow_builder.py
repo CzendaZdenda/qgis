@@ -52,7 +52,7 @@ class Plugin:
             try:
                 tmpMods.append( Module(f.absoluteFilePath()) )
             except:
-                print "I can't read this file: {0}".format(f.absoluteFilePath())        
+                print "I can't read this file: {0}".format(f.absoluteFilePath())
         currentModules = map(lambda mod: mod.name(),list(processing.framework.modules()))
         for mod in tmpMods:
             if mod.name() not in currentModules:
@@ -71,6 +71,7 @@ class Module(processing.Module):
         graphDOM = fileXML.getElementsByTagName("Graph")[0] # should be just one
         self.graph = core.Graph()
         self.graph.name = str( graphDOM.getAttribute("name") )
+        self.graph.path = str( graphDOM.getAttribute("name") )
         self.graph.description = str( graphDOM.childNodes[0].nodeValue )
         tags = ["workflow"]
         # looking if there are defined some tags
@@ -94,19 +95,24 @@ class Module(processing.Module):
             # rebuild Models
             for modDOM in subDOM.getElementsByTagName("Module"):
                 mod = core.Module()
-                # add Module to the Graph                
+                # add Module to the Graph
                 mod.label = modDOM.getAttribute("name")
                 mod.id = int( modDOM.getAttribute("id") )
                 self.graph.addModule(mod)
                 mod.description = modDOM.childNodes[0].nodeValue
+                if modDOM.hasAttribute("x"):
+                    x = float( modDOM.getAttribute("x") )
+                    y = float( modDOM.getAttribute("y") )
+                    mod.center = QPoint(x, y)
                 for portDOM in modDOM.getElementsByTagName("Port"):
-                    port = core.Port( dValue = portDOM.getAttribute("default_value"),  portType=int( portDOM.getAttribute("porttype") ), type = portDOM.getAttribute("type"), 
+                    port = core.Port( dValue = portDOM.getAttribute("default_value"),  portType=int( portDOM.getAttribute("porttype") ), type = portDOM.getAttribute("type"),
                                      moduleId = int( portDOM.getAttribute("moduleID") ),  name = portDOM.getAttribute("name"),  optional = self.returnBoolean( portDOM.getAttribute("optional") ) )
 
-                    port.shouldBeSet = self.returnBoolean( portDOM.getAttribute("should_be_set") )
+                    port.setIt = self.returnBoolean( portDOM.getAttribute("should_be_set") )
                     port.connected = self.returnBoolean( portDOM.getAttribute("connected") )
                     port.setEmpty(port.connected == False)
                     port.id = int( portDOM.getAttribute("id") )
+                    #port.setIt = bool( portDOM.getAttribute("setIt") )
                     if portDOM.hasAttribute("alternative_name"):
                         port.alternativeName = str( portDOM.getAttribute("alternative_name") )
                     type = portDOM.getAttribute("type")
@@ -132,18 +138,18 @@ class Module(processing.Module):
                         port.type = PathParameter
                     else:
                         port.type = Parameter
-                        
+
                     port.setValue( str( portDOM.getAttribute("value") ) )
                     port.defaultValue = port.getValue()
                     # if port is input layer or should be set, create Parameter of PFModule
-                    if ( port.type in [VectorLayerParameter, RasterLayerParameter] or port.shouldBeSet ):
+                    if ( port.type in [VectorLayerParameter, RasterLayerParameter] or port.setIt ):
                         if port.connected:
                             pass
                         else:
                             self.addParameter(port)
                     mod.addPort(port)
                 sub.addModule(mod)
-            
+
             # rebuild Connestions
             conns = []
             for conDOM in subDOM.getElementsByTagName("Connection"):
@@ -156,7 +162,7 @@ class Module(processing.Module):
                 conns.append(con)
                 self.graph.addConnection(con)
             sub.setConnections(conns)
-                
+
     def addParameter(self, par):
         try:
             qgisParam = par.type( "{0}".format(par.alternativeName) )
@@ -176,7 +182,7 @@ class Module(processing.Module):
         # to keep Module and Port ID
         qgisParam.ids = [par.moduleId, par.id]
         self._parameters.append(qgisParam)
-        
+
         # register callback to instance for parameter
         QObject.connect(self._instance,
             self._instance.valueChangedSignal(qgisParam),
@@ -191,9 +197,9 @@ class Module(processing.Module):
         mod = self.graph.modules[qgisParam.ids[0]]
         port = mod.getPortByID( qgisParam.ids[1] )
         port.setValue(value)
-        
+
         self._blockSignals = False
-    
+
     def instance(self):
         return self._instance
 
@@ -202,13 +208,13 @@ class Module(processing.Module):
             return True
         else:
             return False
-            
+
 class ModuleInstance(processing.ModuleInstance):
     def __init__(self, module):
         processing.ModuleInstance.__init__(self, module)
         self.graph = module.graph
         QObject.connect(self, self.valueChangedSignal(self.stateParameter), self.stateParameterValueChanged)
-        
+
     def stateParameterValueChanged(self, state):
         if state == StateParameter.State.running:
             self.graph.executeGraph()

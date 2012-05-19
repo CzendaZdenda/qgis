@@ -28,9 +28,15 @@ from osgeo import gdal
 import os
 import tempfile
 
+
 import processing
 from processing.parameters import *
-from processingmanager.dialog import RangeBox
+try:
+    from processingmanager.dialog import RangeBox
+except:
+    from processingplugin.dialog import RangeBox
+
+    
 from blacklist import libraryIsBlackListed, moduleIsBlackListed
 from blacklist import tagIsBlackListed
 import saga_api as saga
